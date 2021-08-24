@@ -14,11 +14,13 @@ pub fn run(log: &mut Logger) {
 }
 
 fn run_with_opts(log: &mut Logger, opts: Vec<CliOpt>) {
+    for opt in &opts {
+        match opt {
+            CliOpt::Address(a) => {}
+            CliOpt::Port(p) => {}
+            CliOpt::Protocol(d) => {}
+            CliOpt::Verbosity(l) => log.set_log_level(l.clone()),
+        }
+    }
     log.info(format!("running with options: {:?}", opts).as_str());
-    opts.iter().for_each(|e| match e {
-        CliOpt::Address(a) => {}
-        CliOpt::Port(p) => {}
-        CliOpt::Protocol(d) => {}
-        CliOpt::Verbosity(l) => log.set_log_level(*l),
-    });
 }

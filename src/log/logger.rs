@@ -80,12 +80,10 @@ impl Configure for Logger {
 }
 
 impl Writer for Logger {
-    fn write<W: Write + Sized>(
-        &self,
-        log_level: LogLevel,
-        msg: &str,
-        writer: &mut W,
-    ) -> Result<(), Error> {
+    fn write<W>(&self, log_level: LogLevel, msg: &str, writer: &mut W) -> Result<(), Error>
+    where
+        W: Write + Sized,
+    {
         let mut log_msg = String::new();
 
         if self.config.timestamp {

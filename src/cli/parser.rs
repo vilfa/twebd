@@ -1,4 +1,4 @@
-use super::CliOpt;
+use super::{exit, CliOpt};
 use crate::{
     log::logger::{Log, Logger},
     log::LogLevel,
@@ -33,12 +33,12 @@ pub fn parse_matches_required<'a>(log: &Logger, matches: &clap::ArgMatches<'a>) 
                             log.err(
                                 format!("failed to parse the specified address: {}", e).as_str(),
                             );
-                            std::process::exit(-1);
+                            exit(-1)
                         }
                     }
                 } else {
                     log.err("expected an address, got none");
-                    std::process::exit(-1);
+                    exit(-1)
                 }
             }
             "port" => {
@@ -47,12 +47,12 @@ pub fn parse_matches_required<'a>(log: &Logger, matches: &clap::ArgMatches<'a>) 
                         Ok(v) => options.push(CliOpt::Port(v)),
                         Err(e) => {
                             log.err(format!("failed to parse the specified port: {}", e).as_str());
-                            std::process::exit(-1);
+                            exit(-1)
                         }
                     }
                 } else {
                     log.err("expected a port, got none");
-                    std::process::exit(-1);
+                    exit(-1)
                 }
             }
             "protocol" => {
@@ -64,7 +64,7 @@ pub fn parse_matches_required<'a>(log: &Logger, matches: &clap::ArgMatches<'a>) 
                     }
                 } else {
                     log.err(format!("expected a protocol").as_str());
-                    std::process::exit(-1);
+                    exit(-1)
                 }
             }
             _ => {}
@@ -89,7 +89,7 @@ pub fn parse_matches_optional<'a>(log: &Logger, matches: &clap::ArgMatches<'a>) 
                     }
                     Err(e) => {
                         log.err(format!("failed to parse log level: `{}`", e).as_str());
-                        std::process::exit(-1);
+                        exit(-1)
                     }
                 }
             } else {

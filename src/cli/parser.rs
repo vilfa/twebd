@@ -1,7 +1,9 @@
 use super::CliOpt;
-use crate::log::config::LogLevel;
-use crate::log::logger::{Log, Logger};
-use crate::net::dproto::DataProtocol;
+use crate::{
+    log::logger::{Log, Logger},
+    log::LogLevel,
+    net::dproto::DataProtocol,
+};
 use std::net::IpAddr;
 
 pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
@@ -12,7 +14,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
         (@arg address: -a --address +takes_value "Sets the listener ip address")
         (@arg port: -p --port +takes_value "Sets the listener port")
         (@arg protocol: -d --protocol +takes_value "Sets the listener protocol (either `tcp` or `udp`)")
-        (@arg logging: -l --loglevel +takes_value "\nSets the logging verbosity\n(0=off, 1=error, 2=warn, 3=info)")
+        (@arg loglevel: -l --loglevel +takes_value "Sets the logging verbosity (0=off, 1=error, 2=warn, 3=info)")
     )
     .get_matches()
 }

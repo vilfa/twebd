@@ -1,30 +1,13 @@
-use super::config::{Color, Config, LogLevel};
+use super::{
+    config::{Config, Configure},
+    out::Writer,
+    Color, LogLevel,
+};
 use chrono::prelude::*;
-use std::io::{stderr, stdout};
-use std::io::{Error, Write};
-use std::sync::Arc;
-use std::sync::Mutex;
-
-pub trait Log {
-    fn enabled(&self) -> bool;
-    fn log(&self, log_level: LogLevel, msg: &str);
-    fn err(&self, msg: &str);
-    fn warn(&self, msg: &str);
-    fn info(&self, msg: &str);
-}
-
-pub trait Configure {
-    fn log_level(&mut self, log_level: LogLevel);
-}
-
-trait Writer {
-    fn write<W: Write + Sized>(
-        &self,
-        log_level: LogLevel,
-        msg: &str,
-        writer: &mut W,
-    ) -> Result<(), Error>;
-}
+use std::{
+    io::{stderr, stdout, Error, Write},
+    sync::Mutex,
+};
 
 pub struct Logger {
     pub log_level: LogLevel,
@@ -33,9 +16,7 @@ pub struct Logger {
 }
 
 impl Logger {
-    // pub fn init() -> Arc<Logger> {
     pub fn init() -> Logger {
-        // Arc::new(Logger::new(LogLevel::default(), Config::default()))
         Logger::new(LogLevel::default(), Config::default())
     }
     fn new(log_level: LogLevel, config: Config) -> Logger {
@@ -48,6 +29,14 @@ impl Logger {
     pub fn set_log_level(&mut self, log_level: LogLevel) {
         self.log_level(log_level);
     }
+}
+
+pub trait Log {
+    fn enabled(&self) -> bool;
+    fn log(&self, log_level: LogLevel, msg: &str);
+    fn err(&self, msg: &str);
+    fn warn(&self, msg: &str);
+    fn info(&self, msg: &str);
 }
 
 impl Log for Logger {
@@ -100,7 +89,9 @@ impl Writer for Logger {
         let mut log_msg = String::new();
 
         if self.config.timestamp {
-            let t = Utc::now().format(&self.config.timestamp_format).to_string();
+            let t = Local::now()
+                .format(&self.config.timestamp_format)
+                .to_string();
             log_msg.push_str(format!("#{}#", &t).as_str());
         }
 

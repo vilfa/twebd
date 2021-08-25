@@ -37,6 +37,7 @@ pub trait Log {
     fn err(&self, msg: &str);
     fn warn(&self, msg: &str);
     fn info(&self, msg: &str);
+    fn debug(&self, msg: &str);
 }
 
 impl Log for Logger {
@@ -70,6 +71,9 @@ impl Log for Logger {
     }
     fn info(&self, msg: &str) {
         self.log(LogLevel::Info, msg)
+    }
+    fn debug(&self, msg: &str) {
+        self.log(LogLevel::Debug, msg);
     }
 }
 

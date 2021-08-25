@@ -30,6 +30,8 @@ impl From<u8> for LogLevel {
     }
 }
 
+pub struct ConfigureMessage {}
+
 pub enum Color {
     None,
     Red,

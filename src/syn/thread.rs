@@ -5,7 +5,7 @@ use super::{
 use crate::log::LogLevel;
 use std::sync::{mpsc, Arc, Mutex};
 
-struct ThreadPool {
+pub struct ThreadPool {
     workers: Vec<Worker>,
     log_worker: LogWorker,
     sender: Tx,
@@ -44,20 +44,26 @@ impl ThreadPool {
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
-        self.log_worker.sender.send(Message::Log(
-            LogLevel::Debug,
-            format!("sending terminate message to all workers"),
-        ));
+        self.log_worker
+            .sender
+            .send(Message::Log(
+                LogLevel::Debug,
+                format!("sending terminate message to all workers"),
+            ))
+            .unwrap();
 
         for _ in &self.workers {
             self.sender.send(Message::Terminate).unwrap();
         }
 
         for worker in &mut self.workers {
-            self.log_worker.sender.send(Message::Log(
-                LogLevel::Debug,
-                format!("shutting down worker {}", worker.id),
-            ));
+            self.log_worker
+                .sender
+                .send(Message::Log(
+                    LogLevel::Debug,
+                    format!("shutting down worker {}", worker.id),
+                ))
+                .unwrap();
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
             }

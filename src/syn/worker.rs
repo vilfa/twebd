@@ -28,31 +28,39 @@ impl Worker {
 
             match message {
                 Message::Job(job) => {
-                    logger.send(Message::Log(
-                        LogLevel::Debug,
-                        format!("worker {} got a job. executing", id),
-                    ));
+                    logger
+                        .send(Message::Log(
+                            LogLevel::Debug,
+                            format!("worker {} got a job. executing", id),
+                        ))
+                        .unwrap();
                     job();
                 }
                 Message::Log(log_level, msg) => {
-                    logger.send(Message::Log(
-                        LogLevel::Debug,
-                        format!("worker {} got a log. sending", id),
-                    ));
-                    logger.send(Message::Log(log_level, msg));
+                    logger
+                        .send(Message::Log(
+                            LogLevel::Debug,
+                            format!("worker {} got a log. sending", id),
+                        ))
+                        .unwrap();
+                    logger.send(Message::Log(log_level, msg)).unwrap();
                 }
                 Message::LogConfigure(conf) => {
-                    logger.send(Message::Log(
-                        LogLevel::Debug,
-                        format!("worker {} got a log config. sending", id),
-                    ));
-                    logger.send(Message::LogConfigure(conf));
+                    logger
+                        .send(Message::Log(
+                            LogLevel::Debug,
+                            format!("worker {} got a log config. sending", id),
+                        ))
+                        .unwrap();
+                    logger.send(Message::LogConfigure(conf)).unwrap();
                 }
                 Message::Terminate => {
-                    logger.send(Message::Log(
-                        LogLevel::Debug,
-                        format!("worker {} got a terminate message. terminating", id),
-                    ));
+                    logger
+                        .send(Message::Log(
+                            LogLevel::Debug,
+                            format!("worker {} got a terminate message. terminating", id),
+                        ))
+                        .unwrap();
                     break;
                 }
             }

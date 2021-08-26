@@ -1,6 +1,6 @@
 pub mod config;
 pub mod logger;
-pub mod out;
+pub mod write;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogLevel {
@@ -30,12 +30,12 @@ impl From<u8> for LogLevel {
     }
 }
 
-pub struct ConfigureMessage {}
+pub enum ConfigureMessage {}
 
 pub enum Color {
     None,
     Red,
-    Orange,
+    Yellow,
     Blue,
 }
 
@@ -43,7 +43,7 @@ impl Color {
     pub fn color(color: &Color, msg: &str) -> String {
         match color {
             Color::Red => format!("\u{001b}[31;1m{}\u{001b}[0m", msg),
-            Color::Orange => format!("\u{001b}[33;1m{}\u{001b}[0m", msg),
+            Color::Yellow => format!("\u{001b}[33;1m{}\u{001b}[0m", msg),
             Color::Blue => format!("\u{001b}[34;1m{}\u{001b}[0m", msg),
             Color::None => format!("\u{001b}[0m{}\u{001b}[0m", msg),
         }

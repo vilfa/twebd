@@ -1,26 +1,18 @@
 use super::{parser, CliOpt};
-use crate::log::logger::{Log, Logger};
+use crate::srv::server::Server;
 
-pub fn run(log: &mut Logger) {
+pub fn run() -> Server {
     let matches = parser::parse_args();
     let opts: Vec<CliOpt> = vec![
-        parser::parse_matches_required(log, &matches),
-        parser::parse_matches_optional(log, &matches),
+        parser::parse_matches_required(&matches),
+        parser::parse_matches_optional(&matches),
     ]
     .into_iter()
     .flatten()
     .collect();
-    run_with_opts(log, opts);
+    run_with_opts(opts)
 }
 
-fn run_with_opts(log: &mut Logger, opts: Vec<CliOpt>) {
-    for opt in &opts {
-        match opt {
-            CliOpt::Address(a) => {}
-            CliOpt::Port(p) => {}
-            CliOpt::Protocol(d) => {}
-            CliOpt::Verbosity(l) => log.set_log_level(l.clone()),
-        }
-    }
-    log.info(format!("running with options: {:?}", opts).as_str());
+fn run_with_opts(opts: Vec<CliOpt>) -> Server {
+    Server::new(opts)
 }

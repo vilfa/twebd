@@ -81,14 +81,16 @@ pub struct LogWorker {
 impl LogWorker {
     pub fn new(id: usize) -> LogWorker {
         let (sender, receiver) = mpsc::channel::<Message>();
-        let mut logger = Logger::init();
+        let mut logger = Logger::new();
         let thread = thread::spawn(move || loop {
             let message = receiver.recv().unwrap();
             match message {
-                Message::Log(log_level, msg) => logger.log(log_level, &msg),
+                Message::Log(log_level, msg) => logger.log(log_level, msg),
                 Message::LogConfigure(c) => {}
                 Message::Terminate => {
-                    logger.debug("log worker got a terminate message. terminating");
+                    logger.debug(String::from(
+                        "log worker got a terminate message. terminating",
+                    ));
                     break;
                 }
                 _ => {}

@@ -1,6 +1,6 @@
 use super::{
     config::{Config, Configure},
-    out::Writer,
+    write::Writer,
     Color, LogLevel,
 };
 use chrono::prelude::*;
@@ -16,35 +16,29 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn init() -> Logger {
-        Logger::new(LogLevel::default(), Config::default())
-    }
-    fn new(log_level: LogLevel, config: Config) -> Logger {
+    pub fn new() -> Logger {
         Logger {
-            log_level,
-            config,
+            log_level: LogLevel::default(),
+            config: Config::default(),
             out_lock: Mutex::new(()),
         }
-    }
-    pub fn set_log_level(&mut self, log_level: LogLevel) {
-        self.log_level(log_level);
     }
 }
 
 pub trait Log {
     fn enabled(&self) -> bool;
-    fn log(&self, log_level: LogLevel, msg: &str);
-    fn err(&self, msg: &str);
-    fn warn(&self, msg: &str);
-    fn info(&self, msg: &str);
-    fn debug(&self, msg: &str);
+    fn log(&self, log_level: LogLevel, msg: String);
+    fn err(&self, msg: String);
+    fn warn(&self, msg: String);
+    fn info(&self, msg: String);
+    fn debug(&self, msg: String);
 }
 
 impl Log for Logger {
     fn enabled(&self) -> bool {
         self.log_level != LogLevel::Off
     }
-    fn log(&self, log_level: LogLevel, msg: &str) {
+    fn log(&self, log_level: LogLevel, msg: String) {
         if self.enabled() {
             let _lock = self.out_lock.lock().unwrap();
             if log_level as u8 <= self.log_level as u8 {
@@ -52,34 +46,40 @@ impl Log for Logger {
                     LogLevel::Error => {
                         let stderr = stderr();
                         let mut stderr_lock = stderr.lock();
-                        let _ = self.write(log_level, msg, &mut stderr_lock);
+                        let _ = self.write(log_level, &msg, &mut stderr_lock);
                     }
                     _ => {
                         let stdout = stdout();
                         let mut stdout_lock = stdout.lock();
-                        let _ = self.write(log_level, msg, &mut stdout_lock);
+                        let _ = self.write(log_level, &msg, &mut stdout_lock);
                     }
                 }
             }
         }
     }
-    fn err(&self, msg: &str) {
+    fn err(&self, msg: String) {
         self.log(LogLevel::Error, msg);
     }
-    fn warn(&self, msg: &str) {
+    fn warn(&self, msg: String) {
         self.log(LogLevel::Warning, msg);
     }
-    fn info(&self, msg: &str) {
+    fn info(&self, msg: String) {
         self.log(LogLevel::Info, msg)
     }
-    fn debug(&self, msg: &str) {
+    fn debug(&self, msg: String) {
         self.log(LogLevel::Debug, msg);
     }
 }
 
 impl Configure for Logger {
-    fn log_level(&mut self, log_level: LogLevel) {
+    fn set_log_level(&mut self, log_level: LogLevel) {
         self.log_level = log_level;
+    }
+    fn show_timestamp(&mut self, show: bool) {
+        self.config.show_timestamp = show;
+    }
+    fn show_log_level(&mut self, show: bool) {
+        self.config.show_log_level = show;
     }
 }
 
@@ -88,30 +88,27 @@ impl Writer for Logger {
     where
         W: Write + Sized,
     {
-        let mut log_msg = String::new();
+        let mut record = String::new();
 
-        if self.config.timestamp {
+        if self.config.show_timestamp {
             let t = Local::now()
                 .format(&self.config.timestamp_format)
                 .to_string();
-            log_msg.push_str(format!("#{}#", &t).as_str());
+            record.push_str(&format!("#{}#", t));
         }
 
-        if self.config.loglevel {
-            log_msg.push_str(
-                format!(
-                    "#{}#",
-                    Color::color(
-                        self.config.colors.get(&log_level).unwrap(),
-                        format!("{:?}", log_level).as_str()
-                    )
+        if self.config.show_log_level {
+            record.push_str(&format!(
+                "#{}#",
+                Color::color(
+                    self.config.colors.get(&log_level).unwrap(),
+                    &format!("{:?}", log_level)
                 )
-                .as_str(),
-            );
+            ));
         }
 
-        log_msg.push_str(format!(" {}\n", &msg).as_str());
+        record.push_str(&format!("{}\n", msg));
 
-        write!(writer, "{}", &log_msg)
+        write!(writer, "{}", &record)
     }
 }

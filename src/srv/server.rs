@@ -1,9 +1,23 @@
-use crate::{cli::CliOpt, syn::thread::ThreadPool};
+use crate::{
+    cli::CliOpt,
+    net::socket::{Sock, TcpSock, UdpSock},
+    syn::thread::ThreadPool,
+};
 
 pub struct Server {
     opts: Vec<CliOpt>,
-    // socket: ,
-    thread_pool: ThreadPool,
+    socket: Sock,
+    pool: ThreadPool,
 }
 
-impl Server {}
+impl Server {
+    pub fn new(opts: Vec<CliOpt>) -> Server {
+        Server { opts }
+    }
+    pub fn max_threads() -> u8 {
+        10
+    }
+    pub fn default_threads() -> u8 {
+        4
+    }
+}

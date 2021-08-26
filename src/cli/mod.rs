@@ -10,7 +10,7 @@ pub enum CliOpt {
     Port(u16),
     Protocol(DataProtocol),
     Verbosity(LogLevel),
-    Threads(u8),
+    Threads(usize),
 }
 
 pub fn exit(exit_code: i32) -> ! {

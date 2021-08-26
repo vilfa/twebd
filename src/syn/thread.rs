@@ -2,7 +2,11 @@ use super::{
     message::Message,
     worker::{LogWorker, Tx, Worker},
 };
-use crate::log::LogLevel;
+use crate::{
+    cli::CliOpt,
+    log::{LogLevel, LoggerConfigureMessage},
+    srv::server::Server,
+};
 use std::sync::{mpsc, Arc, Mutex};
 
 pub struct ThreadPool {
@@ -40,6 +44,18 @@ impl ThreadPool {
         let job = Box::new(f);
         self.sender.send(Message::Job(job)).unwrap();
     }
+    pub fn log(&self, log_level: LogLevel, msg: String) {
+        self.log_worker
+            .sender
+            .send(Message::Log(log_level, msg))
+            .unwrap();
+    }
+    pub fn log_conf(&self, conf: LoggerConfigureMessage) {
+        self.log_worker
+            .sender
+            .send(Message::LogConfigure(conf))
+            .unwrap();
+    }
 }
 
 impl Drop for ThreadPool {
@@ -72,6 +88,40 @@ impl Drop for ThreadPool {
         self.log_worker.sender.send(Message::Terminate).unwrap();
         if let Some(thread) = self.log_worker.thread.take() {
             thread.join().unwrap();
+        }
+    }
+}
+
+pub struct ThreadPoolBuilder {
+    logworker_level: LogLevel,
+    pool_size: usize,
+}
+
+impl ThreadPoolBuilder {
+    pub fn new(opts: Vec<CliOpt>) -> ThreadPoolBuilder {
+        let mut pool_builder = ThreadPoolBuilder::default();
+        for opt in opts {
+            match opt {
+                CliOpt::Verbosity(v) => pool_builder.logworker_level = v,
+                CliOpt::Threads(t) => pool_builder.pool_size = t,
+                _ => {}
+            }
+        }
+
+        pool_builder
+    }
+    pub fn thread_pool(&self) -> ThreadPool {
+        let pool = ThreadPool::new(self.pool_size);
+        pool.log_conf(LoggerConfigureMessage::SetLogLevel(self.logworker_level));
+        pool
+    }
+}
+
+impl Default for ThreadPoolBuilder {
+    fn default() -> Self {
+        ThreadPoolBuilder {
+            logworker_level: LogLevel::default(),
+            pool_size: Server::default_threads(),
         }
     }
 }

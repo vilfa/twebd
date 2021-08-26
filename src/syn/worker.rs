@@ -1,7 +1,8 @@
 use super::message::Message;
 use crate::log::{
+    config::Configure,
     logger::{Log, Logger},
-    LogLevel,
+    LogLevel, LoggerConfigureMessage,
 };
 use std::{
     sync::{mpsc, Arc, Mutex},
@@ -86,7 +87,11 @@ impl LogWorker {
             let message = receiver.recv().unwrap();
             match message {
                 Message::Log(log_level, msg) => logger.log(log_level, msg),
-                Message::LogConfigure(c) => {}
+                Message::LogConfigure(c) => match c {
+                    LoggerConfigureMessage::SetLogLevel(v) => logger.set_log_level(v),
+                    LoggerConfigureMessage::ShowLogLevel(v) => logger.show_log_level(v),
+                    LoggerConfigureMessage::ShowTimestamp(v) => logger.show_timestamp(v),
+                },
                 Message::Terminate => {
                     logger.debug(String::from(
                         "log worker got a terminate message. terminating",

@@ -103,7 +103,7 @@ pub fn parse_matches_optional<'a>(matches: &clap::ArgMatches<'a>) -> Vec<CliOpt>
             }
             "threads" => {
                 if let Some(v) = matches.value_of(e) {
-                    match v.parse::<u8>() {
+                    match v.parse::<usize>() {
                         Ok(v) if v <= 10 => {
                             options.push(CliOpt::Threads(v));
                         }

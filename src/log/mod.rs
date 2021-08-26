@@ -30,7 +30,11 @@ impl From<u8> for LogLevel {
     }
 }
 
-pub enum ConfigureMessage {}
+pub enum LoggerConfigureMessage {
+    SetLogLevel(LogLevel),
+    ShowTimestamp(bool),
+    ShowLogLevel(bool),
+}
 
 pub enum Color {
     None,

@@ -57,7 +57,7 @@ pub struct SocketBuilder {
 }
 
 impl SocketBuilder {
-    fn new(opts: Vec<CliOpt>) -> SocketBuilder {
+    pub fn new(opts: Vec<CliOpt>) -> SocketBuilder {
         let mut socket_builder = SocketBuilder::default();
         let opts_filtered = SocketBuilder::filter(opts);
         for opt in opts_filtered.0 {
@@ -71,15 +71,15 @@ impl SocketBuilder {
 
         socket_builder
     }
-    fn socket(&self) -> Socket {
+    pub fn socket(&self) -> Socket {
         if self.proto == DataProtocol::Tcp {
             Socket::Tcp(TcpSock::new(self.addr, self.port))
         } else {
             Socket::Udp(UdpSock::new(self.addr, self.port))
         }
     }
-    fn other(&self) -> Vec<CliOpt> {
-        self.other
+    pub fn other(&self) -> Vec<CliOpt> {
+        self.other.to_vec()
     }
     fn filter(opts: Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
         (

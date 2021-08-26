@@ -1,5 +1,4 @@
 use twebd::cli::runner;
-use twebd::log::logger::Logger;
 
 // TODO
 // - *start the logger in its own thread and use message passing*
@@ -10,6 +9,5 @@ use twebd::log::logger::Logger;
 // -
 
 fn main() {
-    let mut logger = Logger::init();
-    runner::run(&mut logger);
+    runner::run();
 }

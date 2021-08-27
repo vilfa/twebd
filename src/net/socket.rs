@@ -1,52 +1,92 @@
 use crate::{cli::CliOpt, net::dproto::DataProtocol};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, UdpSocket};
+use std::{
+    io::{Error, ErrorKind, Result, Write},
+    net::{Incoming, IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket},
+};
 
 pub enum Socket {
     Tcp(TcpSock),
     Udp(UdpSock),
 }
 
-pub trait SockRw {
-    fn read(&self);
-    fn write(&self);
+pub trait TcpSockRw {
+    fn read(&self) -> Incoming<'_>;
+    fn write(&self, stream: &mut TcpStream, buf: &[u8]) -> Result<usize>;
 }
 
 pub struct TcpSock {
     socket: TcpListener,
-    address: SocketAddr,
+    _address: SocketAddr,
 }
 
 impl TcpSock {
     pub fn new(addr: IpAddr, port: u16) -> TcpSock {
-        let address = SocketAddr::new(addr, port);
-        let socket = TcpListener::bind(address).unwrap();
+        let _address = SocketAddr::new(addr, port);
+        let socket = TcpListener::bind(_address).unwrap();
 
-        TcpSock { socket, address }
+        TcpSock { socket, _address }
     }
 }
 
-impl SockRw for TcpSock {
-    fn read(&self) {}
-    fn write(&self) {}
+impl TcpSockRw for TcpSock {
+    fn read(&self) -> Incoming<'_> {
+        self.socket.incoming()
+    }
+    fn write(&self, stream: &mut TcpStream, buf: &[u8]) -> Result<usize> {
+        stream.write(buf)
+    }
+}
+
+pub trait UdpSockRw {
+    fn connect(&mut self, addr: SocketAddr) -> Result<()>;
+    fn read(&self, buf: &mut [u8]) -> Result<(usize, SocketAddr)>;
+    fn write(&self, buf: &[u8]) -> Result<usize>;
 }
 
 pub struct UdpSock {
     socket: UdpSocket,
-    address: SocketAddr,
+    _address: SocketAddr,
+    _remote_address: Option<SocketAddr>,
 }
 
 impl UdpSock {
     pub fn new(addr: IpAddr, port: u16) -> UdpSock {
-        let address = SocketAddr::new(addr, port);
-        let socket = UdpSocket::bind(address).unwrap();
+        let _address = SocketAddr::new(addr, port);
+        let socket = UdpSocket::bind(_address).unwrap();
 
-        UdpSock { socket, address }
+        UdpSock {
+            socket,
+            _address,
+            _remote_address: None,
+        }
     }
 }
 
-impl SockRw for UdpSock {
-    fn read(&self) {}
-    fn write(&self) {}
+impl UdpSockRw for UdpSock {
+    fn connect(&mut self, addr: SocketAddr) -> Result<()> {
+        match self.socket.connect(addr) {
+            Ok(_) => {
+                self._remote_address = Some(addr);
+                Ok(())
+            }
+            Err(e) => {
+                self._remote_address = None;
+                Err(e)
+            }
+        }
+    }
+    fn read(&self, buf: &mut [u8]) -> Result<(usize, SocketAddr)> {
+        self.socket.recv_from(buf)
+    }
+    fn write(&self, buf: &[u8]) -> Result<usize> {
+        match self._remote_address {
+            Some(_) => self.socket.send(buf),
+            None => Err(Error::new(
+                ErrorKind::NotConnected,
+                "this socket is not connected to a remote address",
+            )),
+        }
+    }
 }
 
 pub struct SocketBuilder {

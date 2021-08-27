@@ -104,19 +104,20 @@ pub fn parse_matches_optional<'a>(matches: &clap::ArgMatches<'a>) -> Vec<CliOpt>
             "threads" => {
                 if let Some(v) = matches.value_of(e) {
                     match v.parse::<usize>() {
-                        Ok(v) if v <= 10 => {
+                        Ok(v) if v <= Server::max_threads() => {
                             options.push(CliOpt::Threads(v));
                         }
                         Ok(v) => {
+                            let max_threads = Server::max_threads();
                             logger.warn(format!(
-                                "max thread count is 10, defaulting to 10. got: `{}`",
-                                v
+                                "max thread count is {}, defaulting to {}. got: `{}`",
+                                max_threads, max_threads, v
                             ));
-                            options.push(CliOpt::Threads(Server::max_threads()));
+                            options.push(CliOpt::Threads(max_threads));
                         }
                         Err(e) => {
                             logger.err(format!("failed to parse thread count: `{}`", e));
-                            exit(-1);
+                            exit(-1)
                         }
                     }
                 } else {

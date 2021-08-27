@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub struct Server {
-    opts: Vec<CliOpt>,
+    _opts: Vec<CliOpt>,
     socket: Socket,
     pool: ThreadPool,
 }
@@ -23,7 +23,11 @@ impl Server {
             format!("starting server with options: {:?}", opts),
         );
 
-        Server { opts, socket, pool }
+        Server {
+            _opts: opts,
+            socket,
+            pool,
+        }
     }
     pub fn max_threads() -> usize {
         10

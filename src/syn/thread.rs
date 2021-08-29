@@ -56,6 +56,9 @@ impl ThreadPool {
             .send(Message::LogConfigure(conf))
             .unwrap();
     }
+    pub fn size(&self) -> (usize, usize) {
+        (self.workers.len(), 1)
+    }
 }
 
 impl Drop for ThreadPool {
@@ -93,7 +96,9 @@ impl Drop for ThreadPool {
 }
 
 pub struct ThreadPoolBuilder {
-    logworker_level: LogLevel,
+    log_level: LogLevel,
+    show_loglevel: bool,
+    show_timestamp: bool,
     pool_size: usize,
 }
 
@@ -102,8 +107,10 @@ impl ThreadPoolBuilder {
         let mut pool_builder = ThreadPoolBuilder::default();
         for opt in opts {
             match opt {
-                CliOpt::Verbosity(v) => pool_builder.logworker_level = v,
-                CliOpt::Threads(t) => pool_builder.pool_size = t,
+                CliOpt::Verbosity(v) => pool_builder.log_level = v,
+                CliOpt::Threads(v) => pool_builder.pool_size = v,
+                CliOpt::ShowLoglevel(v) => pool_builder.show_loglevel = v,
+                CliOpt::ShowTimestamp(v) => pool_builder.show_timestamp = v,
                 _ => {}
             }
         }
@@ -112,7 +119,9 @@ impl ThreadPoolBuilder {
     }
     pub fn thread_pool(&self) -> ThreadPool {
         let pool = ThreadPool::new(self.pool_size);
-        pool.log_conf(LoggerConfigureMessage::SetLogLevel(self.logworker_level));
+        pool.log_conf(LoggerConfigureMessage::SetLogLevel(self.log_level));
+        pool.log_conf(LoggerConfigureMessage::ShowLogLevel(self.show_loglevel));
+        pool.log_conf(LoggerConfigureMessage::ShowTimestamp(self.show_timestamp));
         pool
     }
 }
@@ -120,7 +129,9 @@ impl ThreadPoolBuilder {
 impl Default for ThreadPoolBuilder {
     fn default() -> Self {
         ThreadPoolBuilder {
-            logworker_level: LogLevel::default(),
+            log_level: LogLevel::default(),
+            show_loglevel: true,
+            show_timestamp: true,
             pool_size: Server::default_threads(),
         }
     }

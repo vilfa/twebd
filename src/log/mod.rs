@@ -41,6 +41,7 @@ pub enum Color {
     Red,
     Yellow,
     Blue,
+    Green,
 }
 
 impl Color {
@@ -49,6 +50,7 @@ impl Color {
             Color::Red => format!("\u{001b}[31;1m{}\u{001b}[0m", msg),
             Color::Yellow => format!("\u{001b}[33;1m{}\u{001b}[0m", msg),
             Color::Blue => format!("\u{001b}[34;1m{}\u{001b}[0m", msg),
+            Color::Green => format!("\u{001b}[32;1m{}\u{001b}[0m", msg),
             Color::None => format!("\u{001b}[0m{}\u{001b}[0m", msg),
         }
     }

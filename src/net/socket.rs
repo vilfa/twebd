@@ -4,6 +4,7 @@ use std::{
     net::{Incoming, IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket},
 };
 
+#[derive(Debug)]
 pub enum Socket {
     Tcp(TcpSock),
     Udp(UdpSock),
@@ -14,6 +15,7 @@ pub trait TcpSockRw {
     fn write(&self, stream: &mut TcpStream, buf: &[u8]) -> Result<usize>;
 }
 
+#[derive(Debug)]
 pub struct TcpSock {
     socket: TcpListener,
     _address: SocketAddr,
@@ -43,6 +45,7 @@ pub trait UdpSockRw {
     fn write(&self, buf: &[u8]) -> Result<usize>;
 }
 
+#[derive(Debug)]
 pub struct UdpSock {
     socket: UdpSocket,
     _address: SocketAddr,
@@ -97,7 +100,7 @@ pub struct SocketBuilder {
 }
 
 impl SocketBuilder {
-    pub fn new(opts: Vec<CliOpt>) -> SocketBuilder {
+    pub fn new(opts: &Vec<CliOpt>) -> SocketBuilder {
         let mut socket_builder = SocketBuilder::default();
         let opts_filtered = SocketBuilder::filter(opts);
         for opt in opts_filtered.0 {
@@ -108,6 +111,7 @@ impl SocketBuilder {
                 _ => {}
             }
         }
+        socket_builder.other = opts_filtered.1;
 
         socket_builder
     }
@@ -121,7 +125,7 @@ impl SocketBuilder {
     pub fn other(&self) -> Vec<CliOpt> {
         self.other.to_vec()
     }
-    fn filter(opts: Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
+    fn filter(opts: &Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
         (
             opts.iter()
                 .filter(|opt| {

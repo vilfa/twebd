@@ -37,24 +37,6 @@ impl Worker {
                         .unwrap();
                     job();
                 }
-                Message::Log(log_level, msg) => {
-                    logger
-                        .send(Message::Log(
-                            LogLevel::Debug,
-                            format!("worker {} got a log. sending", id),
-                        ))
-                        .unwrap();
-                    logger.send(Message::Log(log_level, msg)).unwrap();
-                }
-                Message::LogConfigure(conf) => {
-                    logger
-                        .send(Message::Log(
-                            LogLevel::Debug,
-                            format!("worker {} got a log config. sending", id),
-                        ))
-                        .unwrap();
-                    logger.send(Message::LogConfigure(conf)).unwrap();
-                }
                 Message::Terminate => {
                     logger
                         .send(Message::Log(
@@ -64,6 +46,24 @@ impl Worker {
                         .unwrap();
                     break;
                 }
+                _ => {} // Message::Log(log_level, msg) => {
+                        //     logger
+                        //         .send(Message::Log(
+                        //             LogLevel::Debug,
+                        //             format!("worker {} got a log. sending", id),
+                        //         ))
+                        //         .unwrap();
+                        //     logger.send(Message::Log(log_level, msg)).unwrap();
+                        // }
+                        // Message::LogConfigure(conf) => {
+                        //     logger
+                        //         .send(Message::Log(
+                        //             LogLevel::Debug,
+                        //             format!("worker {} got a log config. sending", id),
+                        //         ))
+                        //         .unwrap();
+                        //     logger.send(Message::LogConfigure(conf)).unwrap();
+                        // }
             }
         });
         Worker {
@@ -88,14 +88,27 @@ impl LogWorker {
             match message {
                 Message::Log(log_level, msg) => logger.log(log_level, msg),
                 Message::LogConfigure(c) => match c {
-                    LoggerConfigureMessage::SetLogLevel(v) => logger.set_log_level(v),
-                    LoggerConfigureMessage::ShowLogLevel(v) => logger.show_log_level(v),
-                    LoggerConfigureMessage::ShowTimestamp(v) => logger.show_timestamp(v),
+                    LoggerConfigureMessage::SetLogLevel(v) => {
+                        logger.info(format!("configure logger. setting log level: `{:?}`", &v));
+                        logger.set_log_level(v)
+                    }
+                    LoggerConfigureMessage::ShowLogLevel(v) => {
+                        logger.info(format!(
+                            "configure logger. setting log level visibility: `{:?}`",
+                            &v
+                        ));
+                        logger.show_log_level(v)
+                    }
+                    LoggerConfigureMessage::ShowTimestamp(v) => {
+                        logger.info(format!(
+                            "configure logger. setting timestamp visibility: `{:?}`",
+                            &v
+                        ));
+                        logger.show_timestamp(v)
+                    }
                 },
                 Message::Terminate => {
-                    logger.debug(String::from(
-                        "log worker got a terminate message. terminating",
-                    ));
+                    logger.debug(format!("log worker got a terminate message. terminating",));
                     break;
                 }
                 _ => {}

@@ -11,6 +11,8 @@ pub enum CliOpt {
     Protocol(DataProtocol),
     Verbosity(LogLevel),
     Threads(usize),
+    ShowTimestamp(bool),
+    ShowLoglevel(bool),
 }
 
 pub fn exit(exit_code: i32) -> ! {

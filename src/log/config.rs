@@ -19,6 +19,7 @@ impl Default for Config {
                 (LogLevel::Error, Color::Red),
                 (LogLevel::Warning, Color::Yellow),
                 (LogLevel::Info, Color::Blue),
+                (LogLevel::Debug, Color::Green),
             ])),
         }
     }

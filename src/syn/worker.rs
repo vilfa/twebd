@@ -2,7 +2,7 @@ use super::message::Message;
 use crate::log::{
     config::Configure,
     logger::{Log, Logger},
-    LogLevel, LoggerConfigureMessage,
+    LogLevel, LogRecord, LoggerConfigureMessage,
 };
 use std::{
     sync::{mpsc, Arc, Mutex},
@@ -30,40 +30,23 @@ impl Worker {
             match message {
                 Message::Job(job) => {
                     logger
-                        .send(Message::Log(
+                        .send(Message::Log(LogRecord::new(
                             LogLevel::Debug,
                             format!("worker {} got a job. executing", id),
-                        ))
+                        )))
                         .unwrap();
                     job();
                 }
                 Message::Terminate => {
                     logger
-                        .send(Message::Log(
+                        .send(Message::Log(LogRecord::new(
                             LogLevel::Debug,
                             format!("worker {} got a terminate message. terminating", id),
-                        ))
+                        )))
                         .unwrap();
                     break;
                 }
-                _ => {} // Message::Log(log_level, msg) => {
-                        //     logger
-                        //         .send(Message::Log(
-                        //             LogLevel::Debug,
-                        //             format!("worker {} got a log. sending", id),
-                        //         ))
-                        //         .unwrap();
-                        //     logger.send(Message::Log(log_level, msg)).unwrap();
-                        // }
-                        // Message::LogConfigure(conf) => {
-                        //     logger
-                        //         .send(Message::Log(
-                        //             LogLevel::Debug,
-                        //             format!("worker {} got a log config. sending", id),
-                        //         ))
-                        //         .unwrap();
-                        //     logger.send(Message::LogConfigure(conf)).unwrap();
-                        // }
+                _ => {}
             }
         });
         Worker {
@@ -86,29 +69,41 @@ impl LogWorker {
         let thread = thread::spawn(move || loop {
             let message = receiver.recv().unwrap();
             match message {
-                Message::Log(log_level, msg) => logger.log(log_level, msg),
+                Message::Log(record) => logger.log(record),
                 Message::LogConfigure(c) => match c {
                     LoggerConfigureMessage::SetLogLevel(v) => {
-                        logger.info(format!("configure logger. setting log level: `{:?}`", &v));
+                        logger.log(LogRecord::new(
+                            LogLevel::Info,
+                            format!("configure logging. setting log level: `{:?}`", &v),
+                        ));
                         logger.set_log_level(v)
                     }
                     LoggerConfigureMessage::ShowLogLevel(v) => {
-                        logger.info(format!(
-                            "configure logger. setting log level visibility: `{:?}`",
-                            &v
+                        logger.log(LogRecord::new(
+                            LogLevel::Info,
+                            format!(
+                                "configure logging. setting log level visibility: `{:?}`",
+                                &v
+                            ),
                         ));
                         logger.show_log_level(v)
                     }
                     LoggerConfigureMessage::ShowTimestamp(v) => {
-                        logger.info(format!(
-                            "configure logger. setting timestamp visibility: `{:?}`",
-                            &v
+                        logger.log(LogRecord::new(
+                            LogLevel::Info,
+                            format!(
+                                "configure logging. setting timestamp visibility: `{:?}`",
+                                &v
+                            ),
                         ));
                         logger.show_timestamp(v)
                     }
                 },
                 Message::Terminate => {
-                    logger.debug(format!("log worker got a terminate message. terminating",));
+                    logger.log(LogRecord::new(
+                        LogLevel::Debug,
+                        format!("log worker got a terminate message. terminating"),
+                    ));
                     break;
                 }
                 _ => {}

@@ -1,9 +1,9 @@
 use super::worker::Job;
-use crate::log::{LogLevel, LoggerConfigureMessage};
+use crate::log::{LogRecord, LoggerConfigureMessage};
 
 pub enum Message {
     Job(Job),
-    Log(LogLevel, String),
+    Log(LogRecord),
     LogConfigure(LoggerConfigureMessage),
     Terminate,
 }

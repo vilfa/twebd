@@ -1,12 +1,14 @@
-use super::{exit, CliOpt};
+use super::CliOpt;
 use crate::{
-    log::logger::{Log, Logger},
-    log::LogLevel,
+    log::{LogLevel, LogRecord},
     net::dproto::DataProtocol,
     srv::server::Server,
 };
 use clap::{App, Arg};
-use std::net::IpAddr;
+use std::{
+    io::{Error, ErrorKind, Result},
+    net::IpAddr,
+};
 
 pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
     App::new("twebd")
@@ -77,131 +79,149 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .help("Hides loglevel when logging"),
         )
         .get_matches()
-    // clap_app!(twebd =>
-    //     (version: "0.1.0")
-    //     (author: "Luka Vilfan <luka.vilfan@protonmail.com>")
-    //     (about: "A simple and lightweight web server daemon")
-    //     (@arg address: -a --address +takes_value "Sets the listener ip address")
-    //     (@arg port: -p --port +takes_value "Sets the listener port")
-    //     (@arg protocol: -d --protocol +takes_value "Sets the listener protocol (either `tcp` or `udp`)")
-    //     (@arg loglevel: -l --loglevel +takes_value "Sets the logging verbosity (")
-    //     (@arg threads: -t --threads +takes_value "Sets the server thread pool size (max 10)")
-    // )
-    // .get_matches()
 }
 
-pub fn parse_matches_required<'a>(matches: &clap::ArgMatches<'a>) -> Vec<CliOpt> {
-    let logger = Logger::new();
-    let mut options = Vec::new();
+pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>, Vec<LogRecord>)> {
+    let mut cli_parser = CliParser::new(matches);
+    let cli_opts = vec![
+        cli_parser.address()?,
+        cli_parser.port()?,
+        cli_parser.protocol()?,
+        cli_parser.loglevel()?,
+        cli_parser.threads()?,
+        cli_parser.hide_loglevel()?,
+        cli_parser.hide_timestamp()?,
+    ];
 
-    vec!["address", "port", "protocol"]
-        .iter()
-        .for_each(|e| match &e[..] {
-            "address" => {
-                if let Some(v) = matches.value_of(e) {
-                    match v.parse::<IpAddr>() {
-                        Ok(v) => options.push(CliOpt::Address(v)),
-                        Err(e) => {
-                            logger.err(format!("failed to parse the specified address: {}", e));
-                            exit(-1)
-                        }
-                    }
-                } else {
-                    logger.err(String::from("expected an address, got none"));
-                    exit(-1)
-                }
-            }
-            "port" => {
-                if let Some(v) = matches.value_of(e) {
-                    match v.parse::<u16>() {
-                        Ok(v) => options.push(CliOpt::Port(v)),
-                        Err(e) => {
-                            logger.err(format!("failed to parse the specified port: {}", e));
-                            exit(-1)
-                        }
-                    }
-                } else {
-                    logger.err(String::from("expected a port, got none"));
-                    exit(-1)
-                }
-            }
-            "protocol" => {
-                if let Some(v) = matches.value_of(e) {
-                    match &v[..] {
-                        "tcp" => options.push(CliOpt::Protocol(DataProtocol::Tcp)),
-                        "udp" => options.push(CliOpt::Protocol(DataProtocol::Udp)),
-                        d => logger.err(format!("unknown data protocol: `{}`", d)),
-                    }
-                } else {
-                    logger.err(format!("expected a protocol"));
-                    exit(-1)
-                }
-            }
-            _ => {}
-        });
-
-    options
+    Ok((cli_opts, cli_parser.backlog()))
 }
 
-pub fn parse_matches_optional<'a>(matches: &clap::ArgMatches<'a>) -> Vec<CliOpt> {
-    let logger = Logger::new();
-    let mut options = Vec::new();
+struct CliParser<'a> {
+    matches: &'a clap::ArgMatches<'a>,
+    backlog: Vec<LogRecord>,
+}
 
-    vec!["loglevel", "threads", "hide-timestamp", "hide-loglevel"]
-        .iter()
-        .for_each(|e| match &e[..] {
-            "loglevel" => {
-                if let Some(v) = matches.value_of(e) {
-                    match v.parse::<u8>() {
-                        Ok(v) if v <= LogLevel::Debug as u8 => {
-                            options.push(CliOpt::Verbosity(LogLevel::from(v)));
-                        }
-                        Ok(_) => {
-                            logger.warn(format!("unknown log level, using default"));
-                            options.push(CliOpt::Verbosity(LogLevel::default()));
-                        }
-                        Err(e) => {
-                            logger.err(format!("failed to parse log level: `{}`", e));
-                            exit(-1)
-                        }
+impl CliParser<'_> {
+    fn new<'a>(matches: &'a clap::ArgMatches<'a>) -> CliParser<'a> {
+        CliParser {
+            matches,
+            backlog: Vec::new(),
+        }
+    }
+    fn backlog(&mut self) -> Vec<LogRecord> {
+        self.backlog.to_vec()
+    }
+    fn address(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("address") {
+            match v.parse::<IpAddr>() {
+                Ok(v) => Ok(CliOpt::Address(v)),
+                Err(e) => Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to parse the specified address: `{}`", e),
+                )),
+            }
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("expected an address, got none"),
+            ))
+        }
+    }
+    fn port(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("port") {
+            match v.parse::<u16>() {
+                Ok(v) => Ok(CliOpt::Port(v)),
+                Err(e) => Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to parse the specified port: `{}`", e),
+                )),
+            }
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("expected a port, got none"),
+            ))
+        }
+    }
+    fn protocol(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("protocol") {
+            match &v[..] {
+                "tcp" => Ok(CliOpt::Protocol(DataProtocol::Tcp)),
+                "udp" => Ok(CliOpt::Protocol(DataProtocol::Udp)),
+                e => Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("unknown data protocol: `{}`", e),
+                )),
+            }
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("expected a protocol"),
+            ))
+        }
+    }
+    fn loglevel(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("loglevel") {
+            match v.parse::<u8>() {
+                Ok(v) => {
+                    if v >= LogLevel::Debug as u8 {
+                        self.backlog.push(LogRecord::new(
+                            LogLevel::Warning,
+                            format!("unknown log level, using default"),
+                        ))
                     }
-                } else {
-                    logger.warn(format!("log level not specified, using default"));
-                    options.push(CliOpt::Verbosity(LogLevel::default()));
+                    Ok(CliOpt::Verbosity(LogLevel::from(v)))
                 }
+                Err(e) => Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to parse log level: `{}`", e),
+                )),
             }
-            "threads" => {
-                if let Some(v) = matches.value_of(e) {
-                    match v.parse::<usize>() {
-                        Ok(v) if v <= Server::max_threads() => {
-                            options.push(CliOpt::Threads(v));
-                        }
-                        Ok(v) => {
-                            let max_threads = Server::max_threads();
-                            logger.warn(format!(
-                                "max thread count is {}, defaulting to {}. got: `{}`",
-                                max_threads, max_threads, v
-                            ));
-                            options.push(CliOpt::Threads(max_threads));
-                        }
-                        Err(e) => {
-                            logger.err(format!("failed to parse thread count: `{}`", e));
-                            exit(-1)
-                        }
+        } else {
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("log level not specified, using default"),
+            ));
+            Ok(CliOpt::Verbosity(LogLevel::default()))
+        }
+    }
+    fn threads(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("threads") {
+            match v.parse::<usize>() {
+                Ok(v) => {
+                    if v > Server::max_threads() {
+                        self.backlog.push(LogRecord::new(
+                            LogLevel::Warning,
+                            format!(
+                                "max thread count is {}, using default. got: `{}`",
+                                Server::max_threads(),
+                                v
+                            ),
+                        ));
                     }
-                } else {
-                    logger.warn(format!("thread count not specified, using default"));
-                    options.push(CliOpt::Threads(Server::default_threads()));
+                    Ok(CliOpt::Threads(std::cmp::min(v, Server::max_threads())))
                 }
+                Err(e) => Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to parse thread count: `{}`", e),
+                )),
             }
-            "hide-timestamp" => {
-                options.push(CliOpt::ShowTimestamp(!matches.is_present(e)));
-            }
-            "hide-loglevel" => {
-                options.push(CliOpt::ShowLoglevel(!matches.is_present(e)));
-            }
-            _ => {}
-        });
-
-    options
+        } else {
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("thread count not specified, using default"),
+            ));
+            Ok(CliOpt::Threads(Server::default_threads()))
+        }
+    }
+    fn hide_timestamp(&mut self) -> Result<CliOpt> {
+        Ok(CliOpt::ShowTimestamp(
+            !self.matches.is_present("hide-timestamp"),
+        ))
+    }
+    fn hide_loglevel(&mut self) -> Result<CliOpt> {
+        Ok(CliOpt::ShowLoglevel(
+            !self.matches.is_present("hide-loglevel"),
+        ))
+    }
 }

@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     cli::CliOpt,
-    log::{LogLevel, LoggerConfigureMessage},
+    log::{LogLevel, LogRecord, LoggerConfigureMessage},
     srv::server::Server,
 };
 use std::sync::{mpsc, Arc, Mutex};
@@ -44,11 +44,8 @@ impl ThreadPool {
         let job = Box::new(f);
         self.sender.send(Message::Job(job)).unwrap();
     }
-    pub fn log(&self, log_level: LogLevel, msg: String) {
-        self.log_worker
-            .sender
-            .send(Message::Log(log_level, msg))
-            .unwrap();
+    pub fn log(&self, record: LogRecord) {
+        self.log_worker.sender.send(Message::Log(record)).unwrap()
     }
     pub fn log_conf(&self, conf: LoggerConfigureMessage) {
         self.log_worker
@@ -65,10 +62,10 @@ impl Drop for ThreadPool {
     fn drop(&mut self) {
         self.log_worker
             .sender
-            .send(Message::Log(
+            .send(Message::Log(LogRecord::new(
                 LogLevel::Debug,
                 format!("sending terminate message to all workers"),
-            ))
+            )))
             .unwrap();
 
         for _ in &self.workers {
@@ -78,10 +75,10 @@ impl Drop for ThreadPool {
         for worker in &mut self.workers {
             self.log_worker
                 .sender
-                .send(Message::Log(
+                .send(Message::Log(LogRecord::new(
                     LogLevel::Debug,
                     format!("shutting down worker {}", worker.id),
-                ))
+                )))
                 .unwrap();
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();

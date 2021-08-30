@@ -1,19 +1,22 @@
-use super::{parser, CliOpt};
-use crate::srv::server::Server;
+use super::parser;
+use crate::{
+    log::{
+        logger::{Log, Logger},
+        LogLevel, LogRecord,
+    },
+    srv::server::Server,
+};
 
 pub fn run() {
     let matches = parser::parse_args();
-    let opts: Vec<CliOpt> = vec![
-        parser::parse_matches_required(&matches),
-        parser::parse_matches_optional(&matches),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-    let server = init_with_opts(opts);
-    server.listen()
-}
-
-fn init_with_opts(opts: Vec<CliOpt>) -> Server {
-    Server::new(opts)
+    match parser::parse_matches(&matches) {
+        Ok((opts, backlog)) => {
+            let server = Server::new(opts);
+            for record in backlog {
+                server.log(record);
+            }
+            server.listen();
+        }
+        Err(e) => Logger::new().log(LogRecord::new(LogLevel::Error, format!("{:?}", e))),
+    }
 }

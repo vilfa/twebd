@@ -2,6 +2,8 @@ pub mod config;
 pub mod logger;
 pub mod write;
 
+use chrono::prelude::*;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogLevel {
     Off = 0,
@@ -26,6 +28,23 @@ impl From<u8> for LogLevel {
             3 => Self::Info,
             4 => Self::Debug,
             _ => Self::default(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct LogRecord {
+    pub timestamp: DateTime<Local>,
+    pub log_level: LogLevel,
+    pub msg: String,
+}
+
+impl LogRecord {
+    pub fn new(log_level: LogLevel, msg: String) -> LogRecord {
+        LogRecord {
+            timestamp: Local::now(),
+            log_level,
+            msg,
         }
     }
 }

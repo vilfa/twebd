@@ -1,9 +1,8 @@
 use super::{
     config::{Config, Configure},
     write::Writer,
-    Color, LogLevel,
+    Color, LogLevel, LogRecord,
 };
-use chrono::prelude::*;
 use std::{
     io::{stderr, stdout, Error, Write},
     sync::Mutex,
@@ -27,47 +26,33 @@ impl Logger {
 
 pub trait Log {
     fn enabled(&self) -> bool;
-    fn log(&self, log_level: LogLevel, msg: String);
-    fn err(&self, msg: String);
-    fn warn(&self, msg: String);
-    fn info(&self, msg: String);
-    fn debug(&self, msg: String);
+    fn loggable(&self, record: &LogRecord) -> bool;
+    fn log(&self, record: LogRecord);
 }
 
 impl Log for Logger {
     fn enabled(&self) -> bool {
         self.log_level != LogLevel::Off
     }
-    fn log(&self, log_level: LogLevel, msg: String) {
-        if self.enabled() {
+    fn loggable(&self, record: &LogRecord) -> bool {
+        record.log_level as u8 <= self.log_level as u8
+    }
+    fn log(&self, record: LogRecord) {
+        if self.enabled() && self.loggable(&record) {
             let _lock = self.out_lock.lock().unwrap();
-            if log_level as u8 <= self.log_level as u8 {
-                match log_level {
-                    LogLevel::Error => {
-                        let stderr = stderr();
-                        let mut stderr_lock = stderr.lock();
-                        let _ = self.write(log_level, &msg, &mut stderr_lock);
-                    }
-                    _ => {
-                        let stdout = stdout();
-                        let mut stdout_lock = stdout.lock();
-                        let _ = self.write(log_level, &msg, &mut stdout_lock);
-                    }
+            match record.log_level {
+                LogLevel::Error => {
+                    let stderr = stderr();
+                    let mut stderr_lock = stderr.lock();
+                    let _ = self.write(record, &mut stderr_lock);
+                }
+                _ => {
+                    let stdout = stdout();
+                    let mut stdout_lock = stdout.lock();
+                    let _ = self.write(record, &mut stdout_lock);
                 }
             }
         }
-    }
-    fn err(&self, msg: String) {
-        self.log(LogLevel::Error, msg);
-    }
-    fn warn(&self, msg: String) {
-        self.log(LogLevel::Warning, msg);
-    }
-    fn info(&self, msg: String) {
-        self.log(LogLevel::Info, msg)
-    }
-    fn debug(&self, msg: String) {
-        self.log(LogLevel::Debug, msg);
     }
 }
 
@@ -84,31 +69,31 @@ impl Configure for Logger {
 }
 
 impl Writer for Logger {
-    fn write<W>(&self, log_level: LogLevel, msg: &str, writer: &mut W) -> Result<(), Error>
+    fn write<W>(&self, record: LogRecord, writer: &mut W) -> Result<(), Error>
     where
         W: Write + Sized,
     {
-        let mut record = String::new();
+        let mut l = String::new();
 
         if self.config.show_timestamp {
-            let t = Local::now()
-                .format(&self.config.timestamp_format)
-                .to_string();
-            record.push_str(&format!("#{}#", t));
+            l.push_str(&format!(
+                "#{}#",
+                record.timestamp.format(&self.config.timestamp_format)
+            ));
         }
 
         if self.config.show_log_level {
-            record.push_str(&format!(
+            l.push_str(&format!(
                 "#{}#",
                 Color::color(
-                    self.config.colors.get(&log_level).unwrap(),
-                    &format!("{:?}", log_level)
+                    self.config.colors.get(&record.log_level).unwrap(),
+                    &format!("{:?}", record.log_level)
                 )
             ));
         }
 
-        record.push_str(&format!("{}\n", msg));
+        l.push_str(&format!("{}\n", record.msg));
 
-        write!(writer, "{}", &record)
+        write!(writer, "{}", &l)
     }
 }

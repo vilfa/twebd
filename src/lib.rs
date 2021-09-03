@@ -1,3 +1,5 @@
+extern crate regex;
+
 pub mod cli;
 pub mod log;
 pub mod net;

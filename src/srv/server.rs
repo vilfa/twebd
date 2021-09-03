@@ -3,7 +3,12 @@ use crate::{
     log::{LogLevel, LogRecord},
     net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
     syn::thread::{ThreadPool, ThreadPoolBuilder},
+    web::http::{
+        request::{HttpParseError, HttpRequestParser},
+        response::{HttpResponse, HttpResponseBuilder},
+    },
 };
+use std::{io::Read, net::TcpStream};
 
 pub struct Server {
     _opts: Vec<CliOpt>,
@@ -68,12 +73,12 @@ impl Server {
                             ));
                             self.log(LogRecord::new(
                                 LogLevel::Debug,
-                                format!("bytes recv: {:?}", &buf[0..bytes]),
+                                format!("bytes recv: `{:?}`", &buf[0..bytes]),
                             ));
                             self.log(LogRecord::new(
                                 LogLevel::Debug,
                                 format!(
-                                    "bytes recv as chars: {:?}",
+                                    "bytes recv as chars: `{:?}`",
                                     String::from_utf8_lossy(&buf[0..bytes])
                                 ),
                             ));
@@ -95,5 +100,29 @@ impl Server {
     }
     pub fn default_threads() -> usize {
         4
+    }
+    fn handle_request(stream: &mut TcpStream) -> Result<HttpResponse, ServerError> {
+        let mut buf = Vec::new();
+        let size = stream.read_to_end(&mut buf)?;
+        let request = HttpRequestParser::new(&mut buf[0..size])?.request()?;
+        Ok(HttpResponseBuilder::new(&request).response())
+    }
+}
+
+enum ServerError {
+    RequestError(HttpParseError),
+    RequestErrorGen(std::io::Error),
+    ResponseError,
+}
+
+impl From<std::io::Error> for ServerError {
+    fn from(e: std::io::Error) -> Self {
+        Self::RequestErrorGen(e)
+    }
+}
+
+impl From<HttpParseError> for ServerError {
+    fn from(e: HttpParseError) -> Self {
+        Self::RequestError(e)
     }
 }

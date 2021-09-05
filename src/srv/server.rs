@@ -1,6 +1,6 @@
 use crate::{
     cli::CliOpt,
-    log::{LogLevel, LogRecord},
+    log::{backlog::Backlog, LogLevel, LogRecord},
     net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
     syn::thread::{ThreadPool, ThreadPoolBuilder},
     web::http::{
@@ -8,7 +8,10 @@ use crate::{
         response::{HttpResponse, HttpResponseBuilder},
     },
 };
-use std::{io::Read, net::TcpStream};
+use std::{
+    io::{BufRead, BufReader},
+    net::TcpStream,
+};
 
 pub struct Server {
     _opts: Vec<CliOpt>,
@@ -55,7 +58,18 @@ impl Server {
                     self.log(LogRecord::new(
                         LogLevel::Info,
                         format!("tcp listener got a connection: `{:?}`", &stream),
-                    ))
+                    ));
+                    let mut stream = stream.unwrap();
+                    match self.handle_request(&mut stream) {
+                        Ok(v) => self.log(LogRecord::new(
+                            LogLevel::Info,
+                            format!("handle request: send response: {:?}", v),
+                        )),
+                        Err(e) => self.log(LogRecord::new(
+                            LogLevel::Error,
+                            format!("error handling request: {:?}", e),
+                        )),
+                    }
                 }
             }
             Socket::Udp(socket) => {
@@ -101,14 +115,23 @@ impl Server {
     pub fn default_threads() -> usize {
         4
     }
-    fn handle_request(stream: &mut TcpStream) -> Result<HttpResponse, ServerError> {
-        let mut buf = Vec::new();
-        let size = stream.read_to_end(&mut buf)?;
-        let request = HttpRequestParser::new(&mut buf[0..size])?.request()?;
+    fn handle_request(&self, stream: &mut TcpStream) -> Result<HttpResponse, ServerError> {
+        let mut reader = BufReader::new(stream);
+        let mut buf = reader.fill_buf()?.to_vec();
+        let request_parser = HttpRequestParser::new(&mut buf)?;
+        let (request, backlog) = (request_parser.request()?, request_parser.backlog());
+        self.log(LogRecord::new(
+            LogLevel::Info,
+            format!("handle request: parsed request: {:#?}", &request),
+        ));
+        for rec in backlog {
+            self.log(rec);
+        }
         Ok(HttpResponseBuilder::new(&request).response())
     }
 }
 
+#[derive(Debug)]
 enum ServerError {
     RequestError(HttpParseError),
     RequestErrorGen(std::io::Error),

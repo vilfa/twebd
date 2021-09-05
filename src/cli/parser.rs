@@ -1,6 +1,6 @@
 use super::CliOpt;
 use crate::{
-    log::{LogLevel, LogRecord},
+    log::{backlog::Backlog, LogLevel, LogRecord},
     net::dproto::DataProtocol,
     srv::server::Server,
 };
@@ -108,9 +108,6 @@ impl CliParser<'_> {
             backlog: Vec::new(),
         }
     }
-    fn backlog(&mut self) -> Vec<LogRecord> {
-        self.backlog.to_vec()
-    }
     fn address(&mut self) -> Result<CliOpt> {
         if let Some(v) = self.matches.value_of("address") {
             match v.parse::<IpAddr>() {
@@ -164,7 +161,7 @@ impl CliParser<'_> {
         if let Some(v) = self.matches.value_of("loglevel") {
             match v.parse::<u8>() {
                 Ok(v) => {
-                    if v >= LogLevel::Debug as u8 {
+                    if v > LogLevel::Debug as u8 {
                         self.backlog.push(LogRecord::new(
                             LogLevel::Warning,
                             format!("unknown log level, using default"),
@@ -223,5 +220,11 @@ impl CliParser<'_> {
         Ok(CliOpt::ShowLoglevel(
             !self.matches.is_present("hide-loglevel"),
         ))
+    }
+}
+
+impl Backlog for CliParser<'_> {
+    fn backlog(&self) -> Vec<LogRecord> {
+        self.backlog.to_vec()
     }
 }

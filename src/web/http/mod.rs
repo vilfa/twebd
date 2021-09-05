@@ -4,9 +4,12 @@ pub mod response;
 use crate::web::http::request::HttpParseError;
 use std::{collections::HashMap, path::PathBuf, result::Result};
 
-pub const CRLF: &str = "\r\n";
-pub const WSPC: &str = " ";
+pub const CRLF: &str = "\r\n"; // Line end sequence
+pub const WSPC: &str = " "; // Whitespace
+pub const HDSP: &str = ": "; // Header key separator
+pub const EMPT: &str = ""; // Empty separator
 
+#[derive(Debug)]
 pub enum HttpMethod {
     Options,
     Get,
@@ -20,7 +23,7 @@ pub enum HttpMethod {
 }
 
 impl HttpMethod {
-    fn parse(v: String) -> Result<Self, HttpParseError> {
+    fn parse(v: &String) -> Result<Self, HttpParseError> {
         match &v.to_lowercase()[..] {
             "options" => Ok(HttpMethod::Options),
             "get" => Ok(HttpMethod::Get),
@@ -39,6 +42,7 @@ impl HttpMethod {
     }
 }
 
+#[derive(Debug)]
 pub enum HttpVersion {
     Http11,
     Http20,
@@ -46,7 +50,7 @@ pub enum HttpVersion {
 }
 
 impl HttpVersion {
-    fn parse(v: String) -> Result<Self, HttpParseError> {
+    fn parse(v: &String) -> Result<Self, HttpParseError> {
         match &v.to_lowercase()[..] {
             "http/1.1" => Ok(HttpVersion::Http11),
             "http/2.0" => Ok(HttpVersion::Http20),
@@ -59,6 +63,7 @@ impl HttpVersion {
     }
 }
 
+#[derive(Debug)]
 pub enum HttpStatus {
     Continue = 100,
     SwitchingProtocols = 101,
@@ -111,17 +116,19 @@ impl HttpLine {
     fn parse(tokens: Vec<String>) -> Result<Self, HttpParseError> {
         match tokens.len() {
             3 => Ok(HttpLine {
-                method: HttpMethod::parse(tokens[0])?,
-                uri: PathBuf::from(tokens[1]),
-                version: HttpVersion::parse(tokens[2])?,
+                method: HttpMethod::parse(&tokens[0])?,
+                uri: PathBuf::from(&tokens[1]),
+                version: HttpVersion::parse(&tokens[2])?,
             }),
             _ => Err(HttpParseError::HttpRequestLineParseErr(format!(
-                "unknown error parsing http request line"
+                "unknown error parsing http request line: tokens: `{:?}`",
+                &tokens
             ))),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct HttpHeader {
     headers: HashMap<String, String>,
 }
@@ -129,19 +136,22 @@ pub struct HttpHeader {
 impl HttpHeader {
     fn parse(tokens: Vec<String>) -> Result<Self, HttpParseError> {
         let mut headers = HashMap::new();
-        let mut line: Vec<String> = Vec::new();
         for token in tokens {
-            if token == CRLF {
-                if line.len() >= 2 {
-                    headers.insert(line[0].replace(":", ""), line[1..].join(""));
-                } else {
+            let mut header = token
+                .split(HDSP)
+                .map(|v| v.trim().to_string())
+                .collect::<Vec<String>>();
+            match header.len() {
+                2 => {
+                    let (value, key) = (header.pop().unwrap(), header.pop().unwrap());
+                    let _ = headers.insert(key, value);
+                }
+                _ => {
                     return Err(HttpParseError::HttpHeaderParseErr(format!(
                         "invalid http header: `{:?}`",
-                        line
-                    )));
+                        header
+                    )))
                 }
-            } else {
-                line.push(token);
             }
         }
 
@@ -149,6 +159,7 @@ impl HttpHeader {
     }
 }
 
+#[derive(Debug)]
 pub struct HttpBody {
     tokens: Vec<String>,
 }

@@ -1,5 +1,6 @@
 use super::{request::HttpRequest, HttpBody, HttpHeader, HttpStatus, HttpVersion};
 
+#[derive(Debug)]
 pub struct HttpResponse {
     version: HttpVersion,
     status: HttpStatus,

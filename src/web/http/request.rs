@@ -1,6 +1,8 @@
-use super::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpVersion, CRLF, WSPC};
+use super::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpVersion, CRLF, EMPT, WSPC};
+use crate::log::{backlog::Backlog, LogRecord};
 use std::{path::PathBuf, result::Result};
 
+#[derive(Debug)]
 pub struct HttpRequest {
     method: HttpMethod,
     uri: PathBuf,
@@ -10,29 +12,38 @@ pub struct HttpRequest {
 }
 
 pub struct HttpRequestParser<'a> {
-    buf: &'a [u8],
+    _buf: &'a [u8],
     sbuf: String,
-    stage: HttpParseStage,
-    crlf: String,
-    wspc: String,
+    backlog: Vec<LogRecord>,
 }
 
 impl<'a> HttpRequestParser<'a> {
     pub fn new(buf: &'a mut [u8]) -> Result<HttpRequestParser, HttpParseError> {
         let sbuf = HttpRequestParser::buf_to_str(buf)?;
         Ok(HttpRequestParser {
-            buf,
+            _buf: buf,
             sbuf,
-            stage: HttpParseStage::Ready,
-            crlf: String::from(CRLF),
-            wspc: String::from(WSPC),
+            backlog: Vec::new(),
+        })
+    }
+    pub fn request(&self) -> Result<HttpRequest, HttpParseError> {
+        let mut tokens = self.iter();
+        let request_line = HttpRequestParser::request_line(&mut tokens)?;
+        let header = HttpRequestParser::header(&mut tokens)?;
+        let body = HttpRequestParser::body(&mut tokens)?;
+        Ok(HttpRequest {
+            method: request_line.method,
+            uri: request_line.uri,
+            version: request_line.version,
+            header: header,
+            body: body,
         })
     }
     fn buf_to_str(buf: &'a [u8]) -> Result<String, HttpParseError> {
         match std::str::from_utf8(buf) {
             Ok(v) => match regex::Regex::new(" +") {
                 Ok(r) => {
-                    let sbuf = r.replace_all(v.trim(), " ").to_string();
+                    let sbuf = r.replace_all(v.trim(), WSPC).to_string();
                     Ok(sbuf)
                 }
                 Err(e) => Err(HttpParseError::ParserInitError(format!(
@@ -46,69 +57,39 @@ impl<'a> HttpRequestParser<'a> {
             ))),
         }
     }
-    // fn iter(&'a mut self) -> RequestBufferTokens<'a, String> {
-    fn iter(&'a mut self) -> std::iter::Peekable<std::slice::Iter<'a, String>> {
+    fn iter(&self) -> TokenIter {
         self.sbuf
-            .split(" ")
-            .map(|v| v.trim().to_string())
-            .collect::<Vec<String>>()
-            .iter()
-            .peekable()
+            .split(CRLF)
+            .map(|v| v.trim())
+            .collect::<Vec<&str>>()
+            .into_iter()
     }
-    pub fn request(&'a mut self) -> Result<HttpRequest, HttpParseError> {
-        let tokens = self.iter();
-        let request_line = self.request_line(&mut tokens)?;
-        let header = self.header(&mut tokens)?;
-        let body = self.body(&mut tokens)?;
-        Ok(HttpRequest {
-            method: request_line.method,
-            uri: request_line.uri,
-            version: request_line.version,
-            header: header,
-            body: body,
-        })
-    }
-    fn request_line(&'a mut self, tokens: &mut TokenIter<'a>) -> Result<HttpLine, HttpParseError> {
-        self.stage = HttpParseStage::RequestLine;
+    fn request_line(tokens: &mut TokenIter) -> Result<HttpLine, HttpParseError> {
         let request_line_tokens = tokens
-            .take_while(|v| **v != CRLF)
-            .collect::<Vec<&String>>()
-            .iter()
-            .map(|v| **v)
+            .take(1)
+            .map(|v| v.split(WSPC))
+            .flatten()
+            .map(|v| v.to_string())
             .collect::<Vec<String>>();
         Ok(HttpLine::parse(request_line_tokens)?)
     }
-    fn header(&'a mut self, tokens: &mut TokenIter<'a>) -> Result<HttpHeader, HttpParseError> {
-        self.stage = HttpParseStage::Header;
-        // let header_tokens = tokens.take_while(predicate: P);
-        let header_tokens = Vec::new();
-        for token in tokens {
-            if token == &self.wspc && tokens.peek() == Some(&&self.wspc) {
-                tokens.take(2);
-                break;
-            } else {
-                header_tokens.push(*token);
-            }
-        }
+    fn header(tokens: &mut TokenIter) -> Result<HttpHeader, HttpParseError> {
+        let header_tokens = tokens
+            .take_while(|&v| v != EMPT)
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>();
         Ok(HttpHeader::parse(header_tokens)?)
     }
-    fn body(&'a mut self, tokens: &mut TokenIter<'a>) -> Result<HttpBody, HttpParseError> {
-        self.stage = HttpParseStage::Body;
-        let body_tokens = tokens
-            .collect::<Vec<&String>>()
-            .iter()
-            .map(|v| **v)
-            .collect::<Vec<String>>();
+    fn body(tokens: &mut TokenIter) -> Result<HttpBody, HttpParseError> {
+        let body_tokens = tokens.map(|v| v.to_string()).collect::<Vec<String>>();
         Ok(HttpBody::parse(body_tokens)?)
     }
 }
 
-enum HttpParseStage {
-    Ready,
-    RequestLine,
-    Header,
-    Body,
-    Done,
+impl<'a> Backlog for HttpRequestParser<'a> {
+    fn backlog(&self) -> Vec<LogRecord> {
+        self.backlog.to_vec()
+    }
 }
 
 #[derive(Debug)]
@@ -120,13 +101,4 @@ pub enum HttpParseError {
     HttpRequestLineParseErr(String),
 }
 
-type TokenIter<'a> = std::iter::Peekable<std::slice::Iter<'a, String>>;
-
-// struct RequestBufferTokens<'a, T>(std::iter::Peekable<std::slice::Iter<'a, T>>);
-//
-// impl<'a, T> Iterator for RequestBufferTokens<'a, T> {
-// type Item = &'a T;
-// fn next(&mut self) -> Option<Self::Item> {
-// self.0.next()
-// }
-// }
+type TokenIter<'a> = std::vec::IntoIter<&'a str>;

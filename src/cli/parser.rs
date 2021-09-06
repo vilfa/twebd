@@ -8,6 +8,7 @@ use clap::{App, Arg};
 use std::{
     io::{Error, ErrorKind, Result},
     net::IpAddr,
+    path::{Path, PathBuf},
 };
 
 pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
@@ -45,6 +46,16 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .value_name("PROTOCOL")
                 .max_values(1)
                 .help("Sets the server data layer protocol"),
+        )
+        .arg(
+            Arg::with_name("directory")
+                .short("f")
+                .long("directory")
+                .required(false)
+                .takes_value(true)
+                .value_name("DIRECTORY")
+                .max_values(1)
+                .help("Sets the server directory"),
         )
         .arg(
             Arg::with_name("loglevel")
@@ -87,6 +98,7 @@ pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>,
         cli_parser.address()?,
         cli_parser.port()?,
         cli_parser.protocol()?,
+        cli_parser.directory()?,
         cli_parser.loglevel()?,
         cli_parser.threads()?,
         cli_parser.hide_loglevel()?,
@@ -155,6 +167,24 @@ impl CliParser<'_> {
                 ErrorKind::InvalidInput,
                 format!("expected a protocol"),
             ))
+        }
+    }
+    fn directory(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("directory") {
+            if Path::new(v).exists() {
+                Ok(CliOpt::Directory(PathBuf::from(v)))
+            } else {
+                Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("the specified path doesn't exist: `{}`", v),
+                ))
+            }
+        } else {
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("directory not specified, using default"),
+            ));
+            Ok(CliOpt::Directory(PathBuf::from("/public")))
         }
     }
     fn loglevel(&mut self) -> Result<CliOpt> {

@@ -2,13 +2,14 @@ pub mod parser;
 pub mod runner;
 
 use crate::{log::LogLevel, net::dproto::DataProtocol};
-use std::{net::IpAddr, process};
+use std::{net::IpAddr, path::PathBuf, process};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum CliOpt {
     Address(IpAddr),
     Port(u16),
     Protocol(DataProtocol),
+    Directory(PathBuf),
     Verbosity(LogLevel),
     Threads(usize),
     ShowTimestamp(bool),

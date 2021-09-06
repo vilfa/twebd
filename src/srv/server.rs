@@ -4,12 +4,12 @@ use crate::{
     net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
     syn::thread::{ThreadPool, ThreadPoolBuilder},
     web::http::{
-        request::{HttpParseError, HttpRequestParser},
-        response::{HttpResponse, HttpResponseBuilder},
+        request::{HttpParseError, HttpRequest, HttpRequestParser},
+        response::{HttpResponse, HttpResponseBuilder, HttpResponseError},
     },
 };
 use std::{
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Write},
     net::TcpStream,
 };
 
@@ -60,14 +60,17 @@ impl Server {
                         format!("tcp listener got a connection: `{:?}`", &stream),
                     ));
                     let mut stream = stream.unwrap();
-                    match self.handle_request(&mut stream) {
-                        Ok(v) => self.log(LogRecord::new(
-                            LogLevel::Info,
-                            format!("handle request: send response: {:?}", v),
-                        )),
+                    match self.handle_conn(&mut stream) {
+                        Ok(v) => {
+                            let _ = stream.write(v);
+                            self.log(LogRecord::new(
+                                LogLevel::Info,
+                                format!("handle conn: sent response"),
+                            ));
+                        }
                         Err(e) => self.log(LogRecord::new(
                             LogLevel::Error,
-                            format!("error handling request: {:?}", e),
+                            format!("error handling conn: {:?}", e),
                         )),
                     }
                 }
@@ -115,19 +118,36 @@ impl Server {
     pub fn default_threads() -> usize {
         4
     }
-    fn handle_request(&self, stream: &mut TcpStream) -> Result<HttpResponse, ServerError> {
+    fn handle_conn(&self, stream: &mut TcpStream) -> Result<&[u8], ServerError> {
         let mut reader = BufReader::new(stream);
         let mut buf = reader.fill_buf()?.to_vec();
-        let request_parser = HttpRequestParser::new(&mut buf)?;
+        let request = self.parse_request(&mut buf)?;
+        let response = self.build_response(&request)?;
+        Ok(response.as_buf())
+    }
+    fn parse_request(&self, buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
+        let request_parser = HttpRequestParser::new(buf)?;
         let (request, backlog) = (request_parser.request()?, request_parser.backlog());
         self.log(LogRecord::new(
-            LogLevel::Info,
-            format!("handle request: parsed request: {:#?}", &request),
+            LogLevel::Debug,
+            format!("handle conn: parsed request: {:#?}", &request),
         ));
         for rec in backlog {
             self.log(rec);
         }
-        Ok(HttpResponseBuilder::new(&request).response())
+        Ok(request)
+    }
+    fn build_response(&self, req: &HttpRequest) -> Result<HttpResponse, ServerError> {
+        let response_builder = HttpResponseBuilder::new(req);
+        let (response, backlog) = (response_builder.response()?, response_builder.backlog());
+        self.log(LogRecord::new(
+            LogLevel::Debug,
+            format!("handle conn: built response: {:#?}", &response),
+        ));
+        for rec in backlog {
+            self.log(rec)
+        }
+        Ok(response)
     }
 }
 
@@ -135,7 +155,7 @@ impl Server {
 enum ServerError {
     RequestError(HttpParseError),
     RequestErrorGen(std::io::Error),
-    ResponseError,
+    ResponseError(HttpResponseError),
 }
 
 impl From<std::io::Error> for ServerError {
@@ -147,5 +167,11 @@ impl From<std::io::Error> for ServerError {
 impl From<HttpParseError> for ServerError {
     fn from(e: HttpParseError) -> Self {
         Self::RequestError(e)
+    }
+}
+
+impl From<HttpResponseError> for ServerError {
+    fn from(e: HttpResponseError) -> Self {
+        Self::ResponseError(e)
     }
 }

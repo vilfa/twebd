@@ -61,6 +61,13 @@ impl HttpVersion {
             ))),
         }
     }
+    fn as_buf(&self) -> Vec<u8> {
+        match self {
+            Self::Http11 => b"HTTP/1.1".to_vec(),
+            Self::Http20 => b"HTTP/2.0".to_vec(),
+            Self::Http30 => b"HTTP/3.0".to_vec(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -126,6 +133,11 @@ impl HttpLine {
             ))),
         }
     }
+    fn as_buf(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.append(&mut self.version.as_buf());
+        buf.append(&mut self.)
+    }
 }
 
 #[derive(Debug)]
@@ -157,6 +169,13 @@ impl HttpHeader {
 
         Ok(HttpHeader { headers })
     }
+    fn as_buf(&self) -> Vec<u8> {
+        let mut sbuf = String::new();
+        for (key, value) in self.headers.iter() {
+            sbuf.push(format!("{}: {}{}", key, value, CRLF));
+        }
+        sbuf.into_bytes()
+    }
 }
 
 #[derive(Debug)]
@@ -167,5 +186,8 @@ pub struct HttpBody {
 impl HttpBody {
     fn parse(tokens: Vec<String>) -> Result<Self, HttpParseError> {
         Ok(HttpBody { tokens })
+    }
+    fn as_buf(&self) -> Vec<u8> {
+        self.tokens.join("").into_bytes()
     }
 }

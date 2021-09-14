@@ -101,7 +101,7 @@ pub struct SocketBuilder {
 
 impl SocketBuilder {
     pub fn new(opts: &Vec<CliOpt>) -> SocketBuilder {
-        let mut socket_builder = SocketBuilder::default();
+        let mut socket_builder = Self::default();
         let opts_filtered = SocketBuilder::filter(opts);
         for opt in opts_filtered.0 {
             match opt {

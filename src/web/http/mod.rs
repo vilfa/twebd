@@ -1,8 +1,10 @@
+pub mod get;
 pub mod request;
 pub mod response;
 
-use crate::web::http::request::HttpParseError;
-use std::{collections::HashMap, path::PathBuf, result::Result};
+use crate::web::http::{request::HttpParseError, response::HttpResponseError};
+use chrono::prelude::*;
+use std::{collections::HashMap, fmt, path::PathBuf, result::Result};
 
 pub const CRLF: &str = "\r\n"; // Line end sequence
 pub const WSPC: &str = " "; // Whitespace
@@ -24,25 +26,39 @@ pub enum HttpMethod {
 
 impl HttpMethod {
     fn parse(v: &String) -> Result<Self, HttpParseError> {
-        match &v.to_lowercase()[..] {
-            "options" => Ok(HttpMethod::Options),
-            "get" => Ok(HttpMethod::Get),
-            "head" => Ok(HttpMethod::Head),
-            "post" => Ok(HttpMethod::Post),
-            "put" => Ok(HttpMethod::Put),
-            "delete" => Ok(HttpMethod::Delete),
-            "trace" => Ok(HttpMethod::Trace),
-            "connect" => Ok(HttpMethod::Connect),
-            "patch" => Ok(HttpMethod::Patch),
+        match &v.to_uppercase()[..] {
+            "OPTIONS" => Ok(HttpMethod::Options),
+            "GET" => Ok(HttpMethod::Get),
+            "HEAD" => Ok(HttpMethod::Head),
+            "POST" => Ok(HttpMethod::Post),
+            "PUT" => Ok(HttpMethod::Put),
+            "DELETE" => Ok(HttpMethod::Delete),
+            "TRACE" => Ok(HttpMethod::Trace),
+            "CONNECT" => Ok(HttpMethod::Connect),
+            "PATCH" => Ok(HttpMethod::Patch),
             _ => Err(HttpParseError::HttpMethodParseErr(format!(
                 "expected a valid http method, got: `{}`",
                 v
             ))),
         }
     }
+    #[allow(dead_code)]
+    fn as_buf(&self) -> Vec<u8> {
+        match self {
+            Self::Options => b"OPTIONS".to_vec(),
+            Self::Get => b"GET".to_vec(),
+            Self::Head => b"HEAD".to_vec(),
+            Self::Post => b"POST".to_vec(),
+            Self::Put => b"PUT".to_vec(),
+            Self::Delete => b"DELETE".to_vec(),
+            Self::Trace => b"TRACE".to_vec(),
+            Self::Connect => b"CONNECT".to_vec(),
+            Self::Patch => b"PATCH".to_vec(),
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum HttpVersion {
     Http11,
     Http20,
@@ -51,10 +67,10 @@ pub enum HttpVersion {
 
 impl HttpVersion {
     fn parse(v: &String) -> Result<Self, HttpParseError> {
-        match &v.to_lowercase()[..] {
-            "http/1.1" => Ok(HttpVersion::Http11),
-            "http/2.0" => Ok(HttpVersion::Http20),
-            "http/3.0" => Ok(HttpVersion::Http30),
+        match &v.to_uppercase()[..] {
+            "HTTP/1.1" => Ok(HttpVersion::Http11),
+            "HTTP/2.0" => Ok(HttpVersion::Http20),
+            "HTTP/3.0" => Ok(HttpVersion::Http30),
             _ => Err(HttpParseError::HttpMethodParseErr(format!(
                 "expected a valid http version, got: `{}`",
                 v
@@ -70,7 +86,13 @@ impl HttpVersion {
     }
 }
 
-#[derive(Debug)]
+impl Default for HttpVersion {
+    fn default() -> Self {
+        Self::Http11
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum HttpStatus {
     Continue = 100,
     SwitchingProtocols = 101,
@@ -113,6 +135,75 @@ pub enum HttpStatus {
     HTTPVersionNotSupported = 505,
 }
 
+impl HttpStatus {
+    fn as_buf(&self) -> Vec<u8> {
+        format!("{}", self).as_bytes().to_vec()
+    }
+}
+
+impl Default for HttpStatus {
+    fn default() -> Self {
+        Self::OK
+    }
+}
+
+impl fmt::Display for HttpStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Continue => write!(f, "{} Continue", (*self as usize)),
+            Self::SwitchingProtocols => write!(f, "{} Switching Protocols", (*self as usize)),
+            Self::OK => write!(f, "{} OK", (*self as usize)),
+            Self::Created => write!(f, "{} Created", (*self as usize)),
+            Self::Accepted => write!(f, "{} Accepted", (*self as usize)),
+            Self::NonAuthoritativeInformation => {
+                write!(f, "{} Non Authoritative Information", (*self as usize))
+            }
+            Self::NoContent => write!(f, "{} No Content", (*self as usize)),
+            Self::ResetContent => write!(f, "{} Reset Content", (*self as usize)),
+            Self::PartialContent => write!(f, "{} Partial Content", (*self as usize)),
+            Self::MultipleChoices => write!(f, "{} Multiple Choices", (*self as usize)),
+            Self::MovedPermanently => write!(f, "{} Moved Permanently", (*self as usize)),
+            Self::Found => write!(f, "{} Found", (*self as usize)),
+            Self::SeeOther => write!(f, "{} See Other", (*self as usize)),
+            Self::NotModified => write!(f, "{} Not Modified", (*self as usize)),
+            Self::UseProxy => write!(f, "{} Use Proxy", (*self as usize)),
+            Self::TemporaryRedirect => write!(f, "{} Temporary Redirect", (*self as usize)),
+            Self::BadRequest => write!(f, "{} Bad Request", (*self as usize)),
+            Self::Unauthorized => write!(f, "{} Unauthorized", (*self as usize)),
+            Self::Forbidden => write!(f, "{} Forbidden", (*self as usize)),
+            Self::NotFound => write!(f, "{} Not Found", (*self as usize)),
+            Self::MethodNotAllowed => write!(f, "{} Method Not Allowed", (*self as usize)),
+            Self::NotAcceptable => write!(f, "{} Not Acceptable", (*self as usize)),
+            Self::ProxyAuthenticationRequired => {
+                write!(f, "{} Proxy Authentication Required", (*self as usize))
+            }
+            Self::RequestTimeout => write!(f, "{} Request Timeout", (*self as usize)),
+            Self::Conflict => write!(f, "{} Conflict", (*self as usize)),
+            Self::Gone => write!(f, "{} Gone", (*self as usize)),
+            Self::LengthRequired => write!(f, "{} Length Required", (*self as usize)),
+            Self::PreconditionFailed => write!(f, "{} Precondition Failed", (*self as usize)),
+            Self::RequestEntityTooLarge => {
+                write!(f, "{} Request Entity Too Large", (*self as usize))
+            }
+            Self::RequestURITooLong => write!(f, "{} Request URI Too Long", (*self as usize)),
+            Self::UnsupportedMediaType => write!(f, "{} Unsupported Media Type", (*self as usize)),
+            Self::RequestedRangeNotSatisfiable => {
+                write!(f, "{} Requested Range Not Satisfiable", (*self as usize))
+            }
+            Self::ExpectationFailed => write!(f, "{} Expectation Failed", (*self as usize)),
+            Self::InternalServerError => write!(f, "{} Internal Server Error", (*self as usize)),
+            Self::NotImplemented => write!(f, "{} Not Implemented", (*self as usize)),
+            Self::BadGateway => write!(f, "{} Bad Gateway", (*self as usize)),
+            Self::ServiceUnavailable => write!(f, "{} Service Unavailable", (*self as usize)),
+            Self::GatewayTimeout => write!(f, "{} Gateway Timeout", (*self as usize)),
+            Self::HTTPVersionNotSupported => {
+                write!(f, "{} HTTP Version Not Supported", (*self as usize))
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct HttpLine {
     method: HttpMethod,
     uri: PathBuf,
@@ -133,10 +224,35 @@ impl HttpLine {
             ))),
         }
     }
+    fn _as_buf(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.append(&mut self.method.as_buf());
+        buf.append(&mut WSPC.as_bytes().to_vec());
+        buf.append(&mut self.uri.to_str().unwrap().as_bytes().to_vec());
+        buf.append(&mut WSPC.as_bytes().to_vec());
+        buf.append(&mut self.version.as_buf());
+        buf.append(&mut CRLF.as_bytes().to_vec());
+        buf
+    }
+}
+
+#[derive(Debug)]
+pub struct HttpResponseLine {
+    version: HttpVersion,
+    status: HttpStatus,
+}
+
+impl HttpResponseLine {
+    fn new(version: HttpVersion, status: HttpStatus) -> HttpResponseLine {
+        HttpResponseLine { version, status }
+    }
     fn as_buf(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.append(&mut self.version.as_buf());
-        buf.append(&mut self.)
+        buf.append(&mut WSPC.as_bytes().to_vec());
+        buf.append(&mut self.status.as_buf());
+        buf.append(&mut CRLF.as_bytes().to_vec());
+        buf
     }
 }
 
@@ -172,9 +288,19 @@ impl HttpHeader {
     fn as_buf(&self) -> Vec<u8> {
         let mut sbuf = String::new();
         for (key, value) in self.headers.iter() {
-            sbuf.push(format!("{}: {}{}", key, value, CRLF));
+            sbuf.push_str(&format!("{}: {}{}", &key, &value, CRLF));
         }
+        sbuf.push_str(CRLF);
         sbuf.into_bytes()
+    }
+}
+
+impl Default for HttpHeader {
+    fn default() -> Self {
+        let mut headers = HashMap::new();
+        headers.insert(String::from("Date"), Utc::now().to_rfc3339());
+        headers.insert(String::from("Server"), format!("twebd/{}", crate::VERSION));
+        HttpHeader { headers }
     }
 }
 
@@ -189,5 +315,29 @@ impl HttpBody {
     }
     fn as_buf(&self) -> Vec<u8> {
         self.tokens.join("").into_bytes()
+    }
+}
+
+impl From<String> for HttpBody {
+    fn from(v: String) -> Self {
+        HttpBody { tokens: vec![v] }
+    }
+}
+
+impl From<HttpResponseError> for HttpBody {
+    fn from(v: HttpResponseError) -> Self {
+        match v {
+            HttpResponseError::FileReaderError(e) => HttpBody {
+                tokens: vec![format!("{:?}", e)],
+            },
+            HttpResponseError::FilePathInvalid(e) => HttpBody { tokens: vec![e] },
+            HttpResponseError::FileNotFound(e) => HttpBody { tokens: vec![e] },
+        }
+    }
+}
+
+impl Default for HttpBody {
+    fn default() -> Self {
+        HttpBody { tokens: Vec::new() }
     }
 }

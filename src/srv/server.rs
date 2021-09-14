@@ -2,6 +2,7 @@ use crate::{
     cli::CliOpt,
     log::{backlog::Backlog, LogLevel, LogRecord},
     net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
+    srv::file::ServerRootBuilder,
     syn::thread::{ThreadPool, ThreadPoolBuilder},
     web::http::{
         request::{HttpParseError, HttpRequest, HttpRequestParser},
@@ -11,21 +12,25 @@ use crate::{
 use std::{
     io::{BufRead, BufReader, Write},
     net::TcpStream,
+    path::PathBuf,
 };
 
 pub struct Server {
     _opts: Vec<CliOpt>,
     socket: Socket,
     pool: ThreadPool,
+    root: PathBuf,
 }
 
 impl Server {
     pub fn new(opts: Vec<CliOpt>) -> Server {
         let sock_builder = SocketBuilder::new(&opts);
         let pool_builder = ThreadPoolBuilder::new(sock_builder.other());
+        let root_builder = ServerRootBuilder::new(pool_builder.other());
 
         let socket = sock_builder.socket();
         let pool = pool_builder.thread_pool();
+        let root = root_builder.root();
 
         pool.log(LogRecord::new(
             LogLevel::Info,
@@ -44,6 +49,7 @@ impl Server {
             _opts: opts,
             socket,
             pool,
+            root,
         }
     }
     pub fn listen(&self) {
@@ -62,11 +68,18 @@ impl Server {
                     let mut stream = stream.unwrap();
                     match self.handle_conn(&mut stream) {
                         Ok(v) => {
-                            let _ = stream.write(v);
+                            let _ = stream.write(&v);
                             self.log(LogRecord::new(
                                 LogLevel::Info,
                                 format!("handle conn: sent response"),
                             ));
+                            self.log(LogRecord::new(
+                                LogLevel::Debug,
+                                format!(
+                                    "handle conn: sent response: `{:?}`",
+                                    String::from_utf8_lossy(&v)
+                                ),
+                            ))
                         }
                         Err(e) => self.log(LogRecord::new(
                             LogLevel::Error,
@@ -118,7 +131,7 @@ impl Server {
     pub fn default_threads() -> usize {
         4
     }
-    fn handle_conn(&self, stream: &mut TcpStream) -> Result<&[u8], ServerError> {
+    fn handle_conn(&self, stream: &mut TcpStream) -> Result<Vec<u8>, ServerError> {
         let mut reader = BufReader::new(stream);
         let mut buf = reader.fill_buf()?.to_vec();
         let request = self.parse_request(&mut buf)?;
@@ -138,8 +151,8 @@ impl Server {
         Ok(request)
     }
     fn build_response(&self, req: &HttpRequest) -> Result<HttpResponse, ServerError> {
-        let response_builder = HttpResponseBuilder::new(req);
-        let (response, backlog) = (response_builder.response()?, response_builder.backlog());
+        let response_builder = HttpResponseBuilder::new(req, &self.root);
+        let (response, backlog) = (response_builder.response(), response_builder.backlog());
         self.log(LogRecord::new(
             LogLevel::Debug,
             format!("handle conn: built response: {:#?}", &response),

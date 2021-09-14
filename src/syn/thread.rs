@@ -97,12 +97,14 @@ pub struct ThreadPoolBuilder {
     show_loglevel: bool,
     show_timestamp: bool,
     pool_size: usize,
+    other: Vec<CliOpt>,
 }
 
 impl ThreadPoolBuilder {
     pub fn new(opts: Vec<CliOpt>) -> ThreadPoolBuilder {
-        let mut pool_builder = ThreadPoolBuilder::default();
-        for opt in opts {
+        let mut pool_builder = Self::default();
+        let opts_filtered = Self::filter(&opts);
+        for opt in opts_filtered.0 {
             match opt {
                 CliOpt::Verbosity(v) => pool_builder.log_level = v,
                 CliOpt::Threads(v) => pool_builder.pool_size = v,
@@ -111,6 +113,7 @@ impl ThreadPoolBuilder {
                 _ => {}
             }
         }
+        pool_builder.other = opts_filtered.1;
 
         pool_builder
     }
@@ -121,6 +124,21 @@ impl ThreadPoolBuilder {
         pool.log_conf(LoggerConfigureMessage::ShowTimestamp(self.show_timestamp));
         pool
     }
+    pub fn other(&self) -> Vec<CliOpt> {
+        self.other.to_vec()
+    }
+    fn filter(opts: &Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
+        (
+            opts.iter()
+                .filter(|opt| !matches!(opt, CliOpt::Directory(_)))
+                .cloned()
+                .collect(),
+            opts.iter()
+                .filter(|opt| matches!(opt, CliOpt::Directory(_)))
+                .cloned()
+                .collect(),
+        )
+    }
 }
 
 impl Default for ThreadPoolBuilder {
@@ -130,6 +148,7 @@ impl Default for ThreadPoolBuilder {
             show_loglevel: true,
             show_timestamp: true,
             pool_size: Server::default_threads(),
+            other: Vec::new(),
         }
     }
 }

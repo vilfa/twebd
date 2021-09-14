@@ -16,6 +16,6 @@ pub enum CliOpt {
     ShowLoglevel(bool),
 }
 
-pub fn exit(exit_code: i32) -> ! {
-    process::exit(exit_code)
+pub fn exit(code: i32) -> ! {
+    process::exit(code)
 }

@@ -4,8 +4,8 @@ use std::{path::PathBuf, result::Result};
 
 #[derive(Debug)]
 pub struct HttpRequest {
-    method: HttpMethod,
-    uri: PathBuf,
+    pub method: HttpMethod,
+    pub uri: PathBuf,
     version: HttpVersion,
     header: HttpHeader,
     body: HttpBody,

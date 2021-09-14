@@ -6,3 +6,5 @@ pub mod net;
 pub mod srv;
 pub mod syn;
 pub mod web;
+
+pub const VERSION: &str = "0.1.0";

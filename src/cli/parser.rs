@@ -172,7 +172,8 @@ impl CliParser<'_> {
     fn directory(&mut self) -> Result<CliOpt> {
         if let Some(v) = self.matches.value_of("directory") {
             if Path::new(v).exists() {
-                Ok(CliOpt::Directory(PathBuf::from(v)))
+                let abs_path = PathBuf::from(v).canonicalize()?;
+                Ok(CliOpt::Directory(abs_path))
             } else {
                 Err(Error::new(
                     ErrorKind::InvalidInput,
@@ -184,7 +185,7 @@ impl CliParser<'_> {
                 LogLevel::Warning,
                 format!("directory not specified, using default"),
             ));
-            Ok(CliOpt::Directory(PathBuf::from("/public")))
+            Ok(CliOpt::Directory(PathBuf::from("./public")))
         }
     }
     fn loglevel(&mut self) -> Result<CliOpt> {

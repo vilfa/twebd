@@ -69,7 +69,15 @@ impl<'a> HttpResponseBuilder<'a> {
         match HttpGetHandler::new(&self.request.uri, &self.srv_root).handle() {
             Ok(v) => {
                 let mut response = HttpResponse::default();
-                response.body = HttpBody::from(v);
+                response.header.headers.insert(
+                    String::from("Content-Type"),
+                    String::from(v.mime().essence_str()),
+                );
+                response
+                    .header
+                    .headers
+                    .insert(String::from("Content-Length"), format!("{}", v.size()));
+                response.body = HttpBody::from(v.as_string());
                 response
             }
             Err(e) => {

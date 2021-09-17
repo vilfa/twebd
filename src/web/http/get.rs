@@ -1,4 +1,7 @@
-use crate::{srv::file::FileReader, web::http::response::HttpResponseError};
+use crate::{
+    srv::file::{File, FileReader},
+    web::http::response::HttpResponseError,
+};
 use std::path::PathBuf;
 
 pub struct HttpGetHandler<'a> {
@@ -13,9 +16,9 @@ impl<'a> HttpGetHandler<'a> {
             srv_root: srv_root.canonicalize().unwrap(),
         }
     }
-    pub fn handle(&self) -> Result<String, HttpResponseError> {
+    pub fn handle(&self) -> Result<File, HttpResponseError> {
         let uri = self.sanitize()?;
-        let file = FileReader::new(&uri).read_as_string()?;
+        let file = FileReader::new(&uri).read()?;
         Ok(file)
     }
     fn sanitize(&self) -> Result<PathBuf, HttpResponseError> {

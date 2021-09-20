@@ -1,5 +1,3 @@
-use twebd::cli::runner;
-
 // TODO
 // DONE - *start the logger in its own thread and use message passing*
 // DONE - implement a thread pool;
@@ -9,7 +7,8 @@ use twebd::cli::runner;
 // DONE - implement simple http requests and responses;
 // DONE - generate self-signed certificates for tls testing;
 // - implement https module;
+// - make socket operations actually multithreaded;
 
-fn main() -> std::result::Result<(), twebd::srv::server::ServerError> {
-    runner::run()
+fn main() {
+    twebd::cli::runner::run();
 }

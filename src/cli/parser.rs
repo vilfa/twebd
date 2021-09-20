@@ -1,7 +1,7 @@
 use crate::{
     cli::CliOpt,
     log::{backlog::Backlog, LogLevel, LogRecord},
-    net::dproto::DataProtocol,
+    net::DataProtocol,
     srv::server::Server,
     APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };
@@ -158,10 +158,6 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            // Err(Error::new(
-            //     ErrorKind::InvalidInput,
-            //     format!("expected an address, got none"),
-            // ))
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
                 format!("address not specified, using default: `127.0.0.1`"),
@@ -179,10 +175,6 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            // Err(Error::new(
-            //     ErrorKind::InvalidInput,
-            //     format!("expected a port, got none"),
-            // ))
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
                 format!("port not specified, using default: `8080`"),
@@ -201,10 +193,6 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            // Err(Error::new(
-            //     ErrorKind::InvalidInput,
-            //     format!("expected a protocol"),
-            // ))
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
                 format!("data protocol not specified, using default: `tcp`"),
@@ -251,7 +239,10 @@ impl CliParser<'_> {
         } else {
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
-                format!("log level not specified, using default"),
+                format!(
+                    "log level not specified, using default: `{:?}`",
+                    LogLevel::default()
+                ),
             ));
             Ok(CliOpt::Verbosity(LogLevel::default()))
         }
@@ -280,7 +271,10 @@ impl CliParser<'_> {
         } else {
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
-                format!("thread count not specified, using default"),
+                format!(
+                    "thread count not specified, using default: `{}`",
+                    Server::default_threads()
+                ),
             ));
             Ok(CliOpt::Threads(Server::default_threads()))
         }
@@ -310,7 +304,7 @@ impl CliParser<'_> {
         if let Some(v) = self.matches.value_of("https-cert") {
             if Path::new(v).exists() {
                 let abs_path = PathBuf::from(v).canonicalize()?;
-                Ok(CliOpt::Directory(abs_path))
+                Ok(CliOpt::HttpsCert(abs_path))
             } else {
                 Err(Error::new(
                     ErrorKind::InvalidInput,
@@ -328,7 +322,7 @@ impl CliParser<'_> {
         if let Some(v) = self.matches.value_of("https-priv-key") {
             if Path::new(v).exists() {
                 let abs_path = PathBuf::from(v).canonicalize()?;
-                Ok(CliOpt::Directory(abs_path))
+                Ok(CliOpt::HttpsPrivKey(abs_path))
             } else {
                 Err(Error::new(
                     ErrorKind::InvalidInput,

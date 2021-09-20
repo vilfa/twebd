@@ -16,13 +16,14 @@ use std::{
     io::{BufRead, BufReader, Write},
     net::TcpStream,
     path::PathBuf,
+    sync::Arc,
 };
 
 pub struct Server {
     socket: Socket,
     thread_pool: ThreadPool,
     server_root: PathBuf,
-    tls_config: Option<rustls::ServerConfig>,
+    tls_config: Arc<rustls::ServerConfig>,
     backlog: Vec<LogRecord>,
 }
 
@@ -38,10 +39,10 @@ impl Server {
         let pool_builder = ThreadPoolBuilder::new(sock_builder.other());
         let root_builder = ServerRootBuilder::new(pool_builder.other());
         let tls_builder = TlsConfigBuilder::new(root_builder.other());
+
         let socket = sock_builder.socket();
         let thread_pool = pool_builder.thread_pool();
         let server_root = root_builder.root();
-        let tls_config = tls_builder.tls_config()?;
 
         backlog.push(LogRecord::new(
             LogLevel::Info,
@@ -52,42 +53,59 @@ impl Server {
             ),
         ));
 
-        Ok(Server {
-            socket,
-            tls_config,
-            thread_pool,
-            server_root,
-            backlog,
-        })
+        if tls_builder.https_enabled() {
+            let tls_config = tls_builder.tls_config()?;
+            Ok(Server {
+                socket,
+                tls_config,
+                thread_pool,
+                server_root,
+                backlog,
+            })
+        } else {
+            Ok(Server {
+                socket,
+                tls_config: None,
+                thread_pool,
+                server_root,
+                backlog,
+            })
+        }
     }
     pub fn listen(&self) {
         self.log(LogRecord::new(LogLevel::Info, format!("starting server")));
         match &self.socket {
             Socket::Tcp(socket) => {
-                self.log(LogRecord::new(
-                    LogLevel::Info,
-                    format!("listening for connections on socket: `{:?}`", &socket),
-                ));
+                if self.is_https() {
+                    // !!! TODO
+                    let server_session =
+                        rustls::ServerSession::new(&(self.tls_config.as_ref().unwrap()));
+                } else {
+                }
+                // self.log(LogRecord::new(
+                //     LogLevel::Info,
+                //     format!("listening for connections on socket: `{:?}`", &socket),
+                // ));
                 for stream in socket.read() {
-                    self.log(LogRecord::new(
-                        LogLevel::Info,
-                        format!("tcp listener got a connection: `{:?}`", &stream),
-                    ));
+                    // self.log(LogRecord::new(
+                    //     LogLevel::Info,
+                    //     format!("tcp listener got a connection: `{:?}`", &stream),
+                    // ));
                     let mut stream = stream.unwrap();
                     match self.handle_conn(&mut stream) {
                         Ok(v) => {
                             let _ = stream.write(&v);
-                            self.log(LogRecord::new(
-                                LogLevel::Info,
-                                format!("handle conn: sent response"),
-                            ));
-                            self.log(LogRecord::new(
-                                LogLevel::Debug,
-                                format!(
-                                    "handle conn: sent response: `{:?}`",
-                                    String::from_utf8_lossy(&v)
-                                ),
-                            ))
+                            // self.log(LogRecord::new(
+                            //     LogLevel::Info,
+                            //     format!("handle conn: sent response"),
+                            // ));
+                            // self.log(LogRecord::new(
+                            //     LogLevel::Debug,
+                            //     format!(
+                            //         "handle conn: sent response: `{:?}`",
+                            //         String::from_utf8_lossy(&v)
+                            //     ),
+                            // ))
                         }
                         Err(e) => self.log(LogRecord::new(
                             LogLevel::Error,
@@ -97,29 +115,29 @@ impl Server {
                 }
             }
             Socket::Udp(socket) => {
-                self.log(LogRecord::new(
-                    LogLevel::Info,
-                    format!("listening for connections on socket: `{:?}`", &socket),
-                ));
+                // self.log(LogRecord::new(
+                //     LogLevel::Info,
+                //     format!("listening for connections on socket: `{:?}`", &socket),
+                // ));
                 loop {
                     let mut buf: [u8; 512] = [0; 512];
                     match socket.read(&mut buf) {
                         Ok((bytes, addr)) => {
-                            self.log(LogRecord::new(
-                                LogLevel::Info,
-                                format!("read {} bytes from socket address: `{:?}`", bytes, addr),
-                            ));
-                            self.log(LogRecord::new(
-                                LogLevel::Debug,
-                                format!("bytes recv: `{:?}`", &buf[0..bytes]),
-                            ));
-                            self.log(LogRecord::new(
-                                LogLevel::Debug,
-                                format!(
-                                    "bytes recv as chars: `{:?}`",
-                                    String::from_utf8_lossy(&buf[0..bytes])
-                                ),
-                            ));
+                            // self.log(LogRecord::new(
+                            //     LogLevel::Info,
+                            //     format!("read {} bytes from socket address: `{:?}`", bytes, addr),
+                            // ));
+                            // self.log(LogRecord::new(
+                            //     LogLevel::Debug,
+                            //     format!("bytes recv: `{:?}`", &buf[0..bytes]),
+                            // ));
+                            // self.log(LogRecord::new(
+                            //     LogLevel::Debug,
+                            //     format!(
+                            //         "bytes recv as chars: `{:?}`",
+                            //         String::from_utf8_lossy(&buf[0..bytes])
+                            //     ),
+                            // ));
                         }
                         Err(e) => self.log(LogRecord::new(
                             LogLevel::Error,
@@ -144,6 +162,9 @@ impl Server {
     pub fn default_threads() -> usize {
         4
     }
+    fn is_https(&self) -> bool {
+        matches!(self.tls_config, Some(_))
+    }
     fn handle_conn(&self, stream: &mut TcpStream) -> Result<Vec<u8>, ServerError> {
         let mut reader = BufReader::new(stream);
         let mut buf = reader.fill_buf()?.to_vec();
@@ -156,7 +177,7 @@ impl Server {
         let (request, backlog) = (request_parser.request()?, request_parser.backlog());
         self.log(LogRecord::new(
             LogLevel::Debug,
-            format!("handle conn: parsed request: {:#?}", &request),
+            format!("handle conn: parsed request: {:?}", &request),
         ));
         for rec in backlog {
             self.log(rec);
@@ -168,7 +189,7 @@ impl Server {
         let (response, backlog) = (response_builder.response(), response_builder.backlog());
         self.log(LogRecord::new(
             LogLevel::Debug,
-            format!("handle conn: built response: {:#?}", &response),
+            format!("handle conn: built response: {:?}", &response),
         ));
         for rec in backlog {
             self.log(rec)

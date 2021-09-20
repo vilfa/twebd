@@ -3,7 +3,7 @@ use crate::{
     log::{backlog::Backlog, LogRecord},
 };
 use rustls::internal::pemfile;
-use std::{path::PathBuf, result::Result};
+use std::{path::PathBuf, result::Result, sync::Arc};
 
 pub struct TlsConfigBuilder {
     backlog: Vec<LogRecord>,
@@ -27,19 +27,18 @@ impl TlsConfigBuilder {
 
         tls_config_builder
     }
-    pub fn tls_config(&self) -> Result<Option<rustls::ServerConfig>, TlsConfigError> {
-        if self.https_enabled {
-            let cert_chain = self.load_cert()?;
-            let priv_key = self.load_priv_key()?;
-            let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-            tls_config.set_single_cert(cert_chain, priv_key)?;
-            Ok(Some(tls_config))
-        } else {
-            Ok(None)
-        }
+    pub fn tls_config(&self) -> Result<Arc<rustls::ServerConfig>, TlsConfigError> {
+        let cert_chain = self.load_cert()?;
+        let priv_key = self.load_priv_key()?;
+        let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+        tls_config.set_single_cert(cert_chain, priv_key)?;
+        Ok(Arc::new(tls_config))
     }
     pub fn other(&self) -> Vec<CliOpt> {
         self.other.to_vec()
+    }
+    pub fn https_enabled(&self) -> bool {
+        self.https_enabled
     }
     fn load_cert(&self) -> Result<Vec<rustls::Certificate>, TlsConfigError> {
         let handle = std::fs::File::open(&self.cert_path)?;
@@ -55,7 +54,7 @@ impl TlsConfigBuilder {
     fn load_priv_key(&self) -> Result<rustls::PrivateKey, TlsConfigError> {
         let handle = std::fs::File::open(&self.priv_key_path)?;
         let mut buf_reader = std::io::BufReader::new(handle);
-        match pemfile::rsa_private_keys(&mut buf_reader).map_err(|e| {
+        match pemfile::pkcs8_private_keys(&mut buf_reader).map_err(|e| {
             TlsConfigError::PrivateKeyError(format!(
                 "failed to load private key: `{:?}`: `{:?}`",
                 &self.priv_key_path, e,

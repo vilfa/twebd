@@ -1,4 +1,4 @@
-use super::LogRecord;
+use crate::log::LogRecord;
 use std::io::{Error, Write};
 
 pub trait Writer {

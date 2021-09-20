@@ -2,7 +2,7 @@ pub mod parser;
 pub mod runner;
 
 use crate::{log::LogLevel, net::dproto::DataProtocol};
-use std::{net::IpAddr, path::PathBuf, process};
+use std::{net::IpAddr, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub enum CliOpt {
@@ -14,8 +14,7 @@ pub enum CliOpt {
     Threads(usize),
     ShowTimestamp(bool),
     ShowLoglevel(bool),
-}
-
-pub fn exit(code: i32) -> ! {
-    process::exit(code)
+    Https(bool),
+    HttpsCert(PathBuf),
+    HttpsPrivKey(PathBuf),
 }

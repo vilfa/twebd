@@ -1,21 +1,22 @@
-use super::CliOpt;
 use crate::{
+    cli::CliOpt,
     log::{backlog::Backlog, LogLevel, LogRecord},
     net::dproto::DataProtocol,
     srv::server::Server,
+    APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };
 use clap::{App, Arg};
 use std::{
     io::{Error, ErrorKind, Result},
-    net::IpAddr,
+    net::{IpAddr, Ipv4Addr},
     path::{Path, PathBuf},
 };
 
 pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
-    App::new("twebd")
-        .version("0.1.0")
-        .author("Luka Vilfan <luka.vilfan@protonmail.com>")
-        .about("A simple server deamon")
+    App::new(APP_NAME)
+        .version(APP_VERSION)
+        .author(APP_AUTHOR)
+        .about(APP_DESCRIPTION)
         .arg(
             Arg::with_name("address")
                 .short("a")
@@ -81,13 +82,37 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
             Arg::with_name("hide-timestamp")
                 .long("hide-timestamp")
                 .required(false)
+                .takes_value(false)
                 .help("Hides timestamps when logging"),
         )
         .arg(
             Arg::with_name("hide-loglevel")
                 .long("hide-loglevel")
                 .required(false)
+                .takes_value(false)
                 .help("Hides loglevel when logging"),
+        )
+        .arg(
+            Arg::with_name("https")
+                .long("https")
+                .required(false)
+                .requires_all(&["https-cert", "https-priv-key"])
+                .takes_value(false)
+                .help("Use https. Must also specify certificate and private key"),
+        )
+        .arg(
+            Arg::with_name("https-cert")
+                .long("https-cert")
+                .requires("https")
+                .takes_value(true)
+                .help("File path to server certificate file"),
+        )
+        .arg(
+            Arg::with_name("https-priv-key")
+                .long("https-priv-key")
+                .requires("https")
+                .takes_value(true)
+                .help("File path to the server key file"),
         )
         .get_matches()
 }
@@ -103,6 +128,9 @@ pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>,
         cli_parser.threads()?,
         cli_parser.hide_loglevel()?,
         cli_parser.hide_timestamp()?,
+        cli_parser.https()?,
+        cli_parser.https_cert()?,
+        cli_parser.https_priv_key()?,
     ];
 
     Ok((cli_opts, cli_parser.backlog()))
@@ -116,7 +144,7 @@ struct CliParser<'a> {
 impl CliParser<'_> {
     fn new<'a>(matches: &'a clap::ArgMatches<'a>) -> CliParser<'a> {
         CliParser {
-            matches,
+            matches: matches,
             backlog: Vec::new(),
         }
     }
@@ -130,10 +158,15 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            Err(Error::new(
-                ErrorKind::InvalidInput,
-                format!("expected an address, got none"),
-            ))
+            // Err(Error::new(
+            //     ErrorKind::InvalidInput,
+            //     format!("expected an address, got none"),
+            // ))
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("address not specified, using default: `127.0.0.1`"),
+            ));
+            Ok(CliOpt::Address(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))))
         }
     }
     fn port(&mut self) -> Result<CliOpt> {
@@ -146,10 +179,15 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            Err(Error::new(
-                ErrorKind::InvalidInput,
-                format!("expected a port, got none"),
-            ))
+            // Err(Error::new(
+            //     ErrorKind::InvalidInput,
+            //     format!("expected a port, got none"),
+            // ))
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("port not specified, using default: `8080`"),
+            ));
+            Ok(CliOpt::Port(8080))
         }
     }
     fn protocol(&mut self) -> Result<CliOpt> {
@@ -163,10 +201,15 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            Err(Error::new(
-                ErrorKind::InvalidInput,
-                format!("expected a protocol"),
-            ))
+            // Err(Error::new(
+            //     ErrorKind::InvalidInput,
+            //     format!("expected a protocol"),
+            // ))
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("data protocol not specified, using default: `tcp`"),
+            ));
+            Ok(CliOpt::Protocol(DataProtocol::Tcp))
         }
     }
     fn directory(&mut self) -> Result<CliOpt> {
@@ -183,7 +226,7 @@ impl CliParser<'_> {
         } else {
             self.backlog.push(LogRecord::new(
                 LogLevel::Warning,
-                format!("directory not specified, using default"),
+                format!("directory not specified, using default: `./public`"),
             ));
             Ok(CliOpt::Directory(PathBuf::from("./public")))
         }
@@ -251,6 +294,53 @@ impl CliParser<'_> {
         Ok(CliOpt::ShowLoglevel(
             !self.matches.is_present("hide-loglevel"),
         ))
+    }
+    fn https(&mut self) -> Result<CliOpt> {
+        if self.matches.is_present("https") {
+            Ok(CliOpt::Https(true))
+        } else {
+            self.backlog.push(LogRecord::new(
+                LogLevel::Warning,
+                format!("https option not specified, using http"),
+            ));
+            Ok(CliOpt::Https(false))
+        }
+    }
+    fn https_cert(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("https-cert") {
+            if Path::new(v).exists() {
+                let abs_path = PathBuf::from(v).canonicalize()?;
+                Ok(CliOpt::Directory(abs_path))
+            } else {
+                Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("the specified certificate path doesn't exist: `{}`", v),
+                ))
+            }
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("expected a certificate path"),
+            ))
+        }
+    }
+    fn https_priv_key(&mut self) -> Result<CliOpt> {
+        if let Some(v) = self.matches.value_of("https-priv-key") {
+            if Path::new(v).exists() {
+                let abs_path = PathBuf::from(v).canonicalize()?;
+                Ok(CliOpt::Directory(abs_path))
+            } else {
+                Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("the specified private key path doesn't exist: `{}`", v),
+                ))
+            }
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("expected a private key path"),
+            ))
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use super::{Color, LogLevel};
+use crate::log::{Color, LogLevel};
 use std::{array::IntoIter, collections::HashMap, convert::From, iter::FromIterator};
 
 pub struct Config {

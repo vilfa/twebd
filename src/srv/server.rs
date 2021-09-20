@@ -4,9 +4,12 @@ use crate::{
     net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
     srv::file::ServerRootBuilder,
     syn::thread::{ThreadPool, ThreadPoolBuilder},
-    web::http::{
-        request::{HttpParseError, HttpRequest, HttpRequestParser},
-        response::{HttpResponse, HttpResponseBuilder, HttpResponseError},
+    web::{
+        http::{
+            request::{HttpParseError, HttpRequest, HttpRequestParser},
+            response::{HttpResponse, HttpResponseBuilder, HttpResponseError},
+        },
+        secure::tls::{TlsConfigBuilder, TlsConfigError},
     },
 };
 use std::{
@@ -16,41 +19,46 @@ use std::{
 };
 
 pub struct Server {
-    _opts: Vec<CliOpt>,
     socket: Socket,
-    pool: ThreadPool,
-    root: PathBuf,
+    thread_pool: ThreadPool,
+    server_root: PathBuf,
+    tls_config: Option<rustls::ServerConfig>,
+    backlog: Vec<LogRecord>,
 }
 
 impl Server {
-    pub fn new(opts: Vec<CliOpt>) -> Server {
-        let sock_builder = SocketBuilder::new(&opts);
+    pub fn new(opts: Vec<CliOpt>) -> std::result::Result<Server, ServerError> {
+        let mut backlog = Vec::new();
+        backlog.push(LogRecord::new(
+            LogLevel::Info,
+            format!("initializing server with options: {:?}", &opts),
+        ));
+
+        let sock_builder = SocketBuilder::new(opts);
         let pool_builder = ThreadPoolBuilder::new(sock_builder.other());
         let root_builder = ServerRootBuilder::new(pool_builder.other());
-
+        let tls_builder = TlsConfigBuilder::new(root_builder.other());
         let socket = sock_builder.socket();
-        let pool = pool_builder.thread_pool();
-        let root = root_builder.root();
+        let thread_pool = pool_builder.thread_pool();
+        let server_root = root_builder.root();
+        let tls_config = tls_builder.tls_config()?;
 
-        pool.log(LogRecord::new(
+        backlog.push(LogRecord::new(
             LogLevel::Info,
             format!(
                 "initialized thread pool with: {} worker thread(s), {} log thread(s)",
-                pool.size().0,
-                pool.size().1
+                thread_pool.size().0,
+                thread_pool.size().1
             ),
         ));
-        pool.log(LogRecord::new(
-            LogLevel::Info,
-            format!("initialized server with options: {:?}", opts),
-        ));
 
-        Server {
-            _opts: opts,
+        Ok(Server {
             socket,
-            pool,
-            root,
-        }
+            tls_config,
+            thread_pool,
+            server_root,
+            backlog,
+        })
     }
     pub fn listen(&self) {
         self.log(LogRecord::new(LogLevel::Info, format!("starting server")));
@@ -123,7 +131,12 @@ impl Server {
         }
     }
     pub fn log(&self, record: LogRecord) {
-        self.pool.log(record);
+        self.thread_pool.log(record);
+    }
+    pub fn log_all(&self, records: &Vec<LogRecord>) {
+        for record in records {
+            self.thread_pool.log(record.to_owned());
+        }
     }
     pub fn max_threads() -> usize {
         10
@@ -151,7 +164,7 @@ impl Server {
         Ok(request)
     }
     fn build_response(&self, req: &HttpRequest) -> Result<HttpResponse, ServerError> {
-        let response_builder = HttpResponseBuilder::new(req, &self.root);
+        let response_builder = HttpResponseBuilder::new(req, &self.server_root);
         let (response, backlog) = (response_builder.response(), response_builder.backlog());
         self.log(LogRecord::new(
             LogLevel::Debug,
@@ -164,11 +177,18 @@ impl Server {
     }
 }
 
+impl Backlog for Server {
+    fn backlog(&self) -> Vec<LogRecord> {
+        self.backlog.to_vec()
+    }
+}
+
 #[derive(Debug)]
-enum ServerError {
+pub enum ServerError {
     RequestError(HttpParseError),
     RequestErrorGen(std::io::Error),
     ResponseError(HttpResponseError),
+    SecurityError(TlsConfigError),
 }
 
 impl From<std::io::Error> for ServerError {
@@ -186,5 +206,11 @@ impl From<HttpParseError> for ServerError {
 impl From<HttpResponseError> for ServerError {
     fn from(e: HttpResponseError) -> Self {
         Self::ResponseError(e)
+    }
+}
+
+impl From<TlsConfigError> for ServerError {
+    fn from(e: TlsConfigError) -> Self {
+        Self::SecurityError(e)
     }
 }

@@ -1,5 +1,7 @@
-use super::worker::Job;
-use crate::log::{LogRecord, LoggerConfigureMessage};
+use crate::{
+    log::{LogRecord, LoggerConfigureMessage},
+    syn::worker::Job,
+};
 
 pub enum Message {
     Job(Job),

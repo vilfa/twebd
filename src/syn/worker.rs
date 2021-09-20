@@ -1,8 +1,10 @@
-use super::message::Message;
-use crate::log::{
-    config::Configure,
-    logger::{Log, Logger},
-    LogLevel, LogRecord, LoggerConfigureMessage,
+use crate::{
+    log::{
+        config::Configure,
+        logger::{Log, Logger},
+        LogLevel, LogRecord, LoggerConfigureMessage,
+    },
+    syn::message::Message,
 };
 use std::{
     sync::{mpsc, Arc, Mutex},

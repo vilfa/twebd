@@ -1,4 +1,4 @@
-use super::{
+use crate::log::{
     config::{Config, Configure},
     write::Writer,
     Color, LogLevel, LogRecord,

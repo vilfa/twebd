@@ -1,5 +1,7 @@
-use super::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpVersion, CRLF, EMPT, WSPC};
-use crate::log::{backlog::Backlog, LogRecord};
+use crate::{
+    log::{backlog::Backlog, LogRecord},
+    web::http::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpVersion, CRLF, EMPT, WSPC},
+};
 use std::{path::PathBuf, result::Result};
 
 #[derive(Debug)]

@@ -1,11 +1,11 @@
-use super::{
-    message::Message,
-    worker::{LogWorker, Tx, Worker},
-};
 use crate::{
     cli::CliOpt,
     log::{LogLevel, LogRecord, LoggerConfigureMessage},
     srv::server::Server,
+    syn::{
+        message::Message,
+        worker::{LogWorker, Tx, Worker},
+    },
 };
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -103,17 +103,15 @@ pub struct ThreadPoolBuilder {
 impl ThreadPoolBuilder {
     pub fn new(opts: Vec<CliOpt>) -> ThreadPoolBuilder {
         let mut pool_builder = Self::default();
-        let opts_filtered = Self::filter(&opts);
-        for opt in opts_filtered.0 {
+        for opt in opts {
             match opt {
                 CliOpt::Verbosity(v) => pool_builder.log_level = v,
                 CliOpt::Threads(v) => pool_builder.pool_size = v,
                 CliOpt::ShowLoglevel(v) => pool_builder.show_loglevel = v,
                 CliOpt::ShowTimestamp(v) => pool_builder.show_timestamp = v,
-                _ => {}
+                cli_opt => pool_builder.other.push(cli_opt.to_owned()),
             }
         }
-        pool_builder.other = opts_filtered.1;
 
         pool_builder
     }
@@ -126,18 +124,6 @@ impl ThreadPoolBuilder {
     }
     pub fn other(&self) -> Vec<CliOpt> {
         self.other.to_vec()
-    }
-    fn filter(opts: &Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
-        (
-            opts.iter()
-                .filter(|opt| !matches!(opt, CliOpt::Directory(_)))
-                .cloned()
-                .collect(),
-            opts.iter()
-                .filter(|opt| matches!(opt, CliOpt::Directory(_)))
-                .cloned()
-                .collect(),
-        )
     }
 }
 

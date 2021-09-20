@@ -100,18 +100,16 @@ pub struct SocketBuilder {
 }
 
 impl SocketBuilder {
-    pub fn new(opts: &Vec<CliOpt>) -> SocketBuilder {
+    pub fn new(opts: Vec<CliOpt>) -> SocketBuilder {
         let mut socket_builder = Self::default();
-        let opts_filtered = SocketBuilder::filter(opts);
-        for opt in opts_filtered.0 {
+        for opt in opts {
             match opt {
                 CliOpt::Address(a) => socket_builder.addr = a,
                 CliOpt::Port(p) => socket_builder.port = p,
                 CliOpt::Protocol(d) => socket_builder.proto = d,
-                _ => {}
+                cli_opt => socket_builder.other.push(cli_opt.to_owned()),
             }
         }
-        socket_builder.other = opts_filtered.1;
 
         socket_builder
     }
@@ -124,28 +122,6 @@ impl SocketBuilder {
     }
     pub fn other(&self) -> Vec<CliOpt> {
         self.other.to_vec()
-    }
-    fn filter(opts: &Vec<CliOpt>) -> (Vec<CliOpt>, Vec<CliOpt>) {
-        (
-            opts.iter()
-                .filter(|opt| {
-                    matches!(
-                        opt,
-                        CliOpt::Address(_) | CliOpt::Port(_) | CliOpt::Protocol(_)
-                    )
-                })
-                .cloned()
-                .collect(),
-            opts.iter()
-                .filter(|opt| {
-                    !matches!(
-                        opt,
-                        CliOpt::Address(_) | CliOpt::Port(_) | CliOpt::Protocol(_)
-                    )
-                })
-                .cloned()
-                .collect(),
-        )
     }
 }
 

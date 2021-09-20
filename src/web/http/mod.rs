@@ -2,7 +2,10 @@ pub mod get;
 pub mod request;
 pub mod response;
 
-use crate::web::http::{request::HttpParseError, response::HttpResponseError};
+use crate::{
+    web::http::{request::HttpParseError, response::HttpResponseError},
+    APP_NAME, APP_VERSION,
+};
 use chrono::prelude::*;
 use std::{collections::HashMap, fmt, path::PathBuf, result::Result};
 
@@ -299,7 +302,10 @@ impl Default for HttpHeader {
     fn default() -> Self {
         let mut headers = HashMap::new();
         headers.insert(String::from("Date"), Utc::now().to_rfc3339());
-        headers.insert(String::from("Server"), format!("twebd/{}", crate::VERSION));
+        headers.insert(
+            String::from("Server"),
+            format!("{}/{}", APP_NAME, APP_VERSION),
+        );
         HttpHeader { headers }
     }
 }

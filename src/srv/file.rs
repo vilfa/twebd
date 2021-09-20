@@ -55,6 +55,7 @@ impl From<std::io::Error> for HttpResponseError {
 
 pub struct ServerRootBuilder {
     root: PathBuf,
+    other: Vec<CliOpt>,
 }
 
 impl ServerRootBuilder {
@@ -63,7 +64,7 @@ impl ServerRootBuilder {
         for opt in opts {
             match opt {
                 CliOpt::Directory(v) => server_root_builder.root = v.to_path_buf(),
-                _ => {}
+                cli_opt => server_root_builder.other.push(cli_opt.to_owned()),
             }
         }
         server_root_builder
@@ -71,12 +72,16 @@ impl ServerRootBuilder {
     pub fn root(&self) -> PathBuf {
         self.root.to_path_buf()
     }
+    pub fn other(&self) -> Vec<CliOpt> {
+        self.other.to_vec()
+    }
 }
 
 impl Default for ServerRootBuilder {
     fn default() -> Self {
         ServerRootBuilder {
             root: PathBuf::from("./"),
+            other: Vec::new(),
         }
     }
 }

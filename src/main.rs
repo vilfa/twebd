@@ -10,6 +10,6 @@ use twebd::cli::runner;
 // DONE - generate self-signed certificates for tls testing;
 // - implement https module;
 
-fn main() {
-    runner::run();
+fn main() -> std::result::Result<(), twebd::srv::server::ServerError> {
+    runner::run()
 }

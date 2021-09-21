@@ -41,7 +41,7 @@ impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
 }
 
 impl Other for TlsConfigBuilder {
-    fn add_other(&self, o: CliOpt) {
+    fn add_other(&mut self, o: CliOpt) {
         self._other.push(o);
     }
     fn other(&self) -> Vec<CliOpt> {
@@ -50,6 +50,9 @@ impl Other for TlsConfigBuilder {
 }
 
 impl Backlog for TlsConfigBuilder {
+    fn add_backlog(&mut self, v: LogRecord) {
+        self._backlog.push(v);
+    }
     fn backlog(&self) -> Vec<LogRecord> {
         self._backlog.to_vec()
     }

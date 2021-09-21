@@ -1,7 +1,11 @@
 use crate::{
     cli::CliOpt,
-    log::{backlog::Backlog, LogLevel, LogRecord},
-    net::socket::{Socket, SocketBuilder, TcpSockRw, UdpSockRw},
+    log::{backlog::Backlog, LogLevel},
+    net::{
+        socket::{Socket, SocketBuilder},
+        tcp::TcpSocketIo,
+        udp::UdpSocketIo,
+    },
     srv::file::ServerRootBuilder,
     syn::thread::{ThreadPool, ThreadPoolBuilder},
     web::{
@@ -30,9 +34,10 @@ pub struct Server {
 impl Server {
     pub fn new(opts: Vec<CliOpt>) -> std::result::Result<Server, ServerError> {
         let mut backlog = Vec::new();
-        backlog.push(LogRecord::new(
+        backlog.push(logf!(
             LogLevel::Info,
-            format!("initializing server with options: {:?}", &opts),
+            "initializing server with options: {:?}",
+            &opts
         ));
 
         let sock_builder = SocketBuilder::new(opts);
@@ -156,12 +161,6 @@ impl Server {
             self.thread_pool.log(record.to_owned());
         }
     }
-    pub fn max_threads() -> usize {
-        10
-    }
-    pub fn default_threads() -> usize {
-        4
-    }
     fn is_https(&self) -> bool {
         matches!(self.tls_config, Some(_))
     }
@@ -201,37 +200,5 @@ impl Server {
 impl Backlog for Server {
     fn backlog(&self) -> Vec<LogRecord> {
         self.backlog.to_vec()
-    }
-}
-
-#[derive(Debug)]
-pub enum ServerError {
-    RequestError(HttpParseError),
-    RequestErrorGen(std::io::Error),
-    ResponseError(HttpResponseError),
-    SecurityError(TlsConfigError),
-}
-
-impl From<std::io::Error> for ServerError {
-    fn from(e: std::io::Error) -> Self {
-        Self::RequestErrorGen(e)
-    }
-}
-
-impl From<HttpParseError> for ServerError {
-    fn from(e: HttpParseError) -> Self {
-        Self::RequestError(e)
-    }
-}
-
-impl From<HttpResponseError> for ServerError {
-    fn from(e: HttpResponseError) -> Self {
-        Self::ResponseError(e)
-    }
-}
-
-impl From<TlsConfigError> for ServerError {
-    fn from(e: TlsConfigError) -> Self {
-        Self::SecurityError(e)
     }
 }

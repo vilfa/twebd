@@ -1,4 +1,4 @@
-use crate::{cli::CliOpt, web::http::response::HttpResponseError};
+use crate::web::http::err::HttpResponseError;
 use std::{
     io::{BufReader, Read},
     path::PathBuf,
@@ -44,44 +44,5 @@ impl FileReader<'_> {
             mime,
             size,
         })
-    }
-}
-
-impl From<std::io::Error> for HttpResponseError {
-    fn from(e: std::io::Error) -> Self {
-        HttpResponseError::FileReaderError(e)
-    }
-}
-
-pub struct ServerRootBuilder {
-    root: PathBuf,
-    other: Vec<CliOpt>,
-}
-
-impl ServerRootBuilder {
-    pub fn new(opts: Vec<CliOpt>) -> ServerRootBuilder {
-        let mut server_root_builder = Self::default();
-        for opt in opts {
-            match opt {
-                CliOpt::Directory(v) => server_root_builder.root = v.to_path_buf(),
-                cli_opt => server_root_builder.other.push(cli_opt.to_owned()),
-            }
-        }
-        server_root_builder
-    }
-    pub fn root(&self) -> PathBuf {
-        self.root.to_path_buf()
-    }
-    pub fn other(&self) -> Vec<CliOpt> {
-        self.other.to_vec()
-    }
-}
-
-impl Default for ServerRootBuilder {
-    fn default() -> Self {
-        ServerRootBuilder {
-            root: PathBuf::from("./"),
-            other: Vec::new(),
-        }
     }
 }

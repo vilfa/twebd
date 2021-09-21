@@ -1,6 +1,13 @@
 extern crate regex;
 extern crate rustls;
 
+#[macro_export]
+macro_rules! logf {
+    ($lvl: expr, $fmt_str: expr $(, $fmt_arg: expr)*) => {
+        $crate::log::LogRecord::new($lvl, format!($fmt_str, $($fmt_arg),*))
+    };
+}
+
 pub mod cli;
 pub mod log;
 pub mod net;

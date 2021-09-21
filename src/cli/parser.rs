@@ -2,8 +2,7 @@ use crate::{
     cli::CliOpt,
     log::{backlog::Backlog, LogLevel, LogRecord},
     net::DataProtocol,
-    srv::server::Server,
-    APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
+    srv, APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };
 use clap::{App, Arg};
 use std::{
@@ -138,14 +137,14 @@ pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>,
 
 struct CliParser<'a> {
     matches: &'a clap::ArgMatches<'a>,
-    backlog: Vec<LogRecord>,
+    _backlog: Vec<LogRecord>,
 }
 
 impl CliParser<'_> {
     fn new<'a>(matches: &'a clap::ArgMatches<'a>) -> CliParser<'a> {
         CliParser {
             matches: matches,
-            backlog: Vec::new(),
+            _backlog: Vec::new(),
         }
     }
     fn address(&mut self) -> Result<CliOpt> {
@@ -158,9 +157,9 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!("address not specified, using default: `127.0.0.1`"),
+                "address not specified, using default: `127.0.0.1`"
             ));
             Ok(CliOpt::Address(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))))
         }
@@ -175,9 +174,9 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!("port not specified, using default: `8080`"),
+                "port not specified, using default: `8080`"
             ));
             Ok(CliOpt::Port(8080))
         }
@@ -193,9 +192,9 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!("data protocol not specified, using default: `tcp`"),
+                "data protocol not specified, using default: `tcp`"
             ));
             Ok(CliOpt::Protocol(DataProtocol::Tcp))
         }
@@ -212,9 +211,9 @@ impl CliParser<'_> {
                 ))
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!("directory not specified, using default: `./public`"),
+                "directory not specified, using default: `./public`"
             ));
             Ok(CliOpt::Directory(PathBuf::from("./public")))
         }
@@ -224,9 +223,13 @@ impl CliParser<'_> {
             match v.parse::<u8>() {
                 Ok(v) => {
                     if v > LogLevel::Debug as u8 {
-                        self.backlog.push(LogRecord::new(
+                        self.add_backlog(logf!(
                             LogLevel::Warning,
-                            format!("unknown log level, using default"),
+                            "unknown log level, using default"
+                        ));
+                        self.add_backlog(logf!(
+                            LogLevel::Warning,
+                            "unknown log level, using default"
                         ))
                     }
                     Ok(CliOpt::Verbosity(LogLevel::from(v)))
@@ -237,12 +240,10 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!(
-                    "log level not specified, using default: `{:?}`",
-                    LogLevel::default()
-                ),
+                "log level not specified, using default: `{:?}`",
+                LogLevel::default()
             ));
             Ok(CliOpt::Verbosity(LogLevel::default()))
         }
@@ -251,17 +252,18 @@ impl CliParser<'_> {
         if let Some(v) = self.matches.value_of("threads") {
             match v.parse::<usize>() {
                 Ok(v) => {
-                    if v > Server::max_threads() {
-                        self.backlog.push(LogRecord::new(
+                    if v > srv::defaults::max_threads() {
+                        self.add_backlog(logf!(
                             LogLevel::Warning,
-                            format!(
-                                "max thread count is {}, using default. got: `{}`",
-                                Server::max_threads(),
-                                v
-                            ),
+                            "max thread count is {}, using default. got: `{}`",
+                            srv::defaults::max_threads(),
+                            v
                         ));
                     }
-                    Ok(CliOpt::Threads(std::cmp::min(v, Server::max_threads())))
+                    Ok(CliOpt::Threads(std::cmp::min(
+                        v,
+                        srv::defaults::max_threads(),
+                    )))
                 }
                 Err(e) => Err(Error::new(
                     ErrorKind::InvalidInput,
@@ -269,14 +271,12 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!(
-                    "thread count not specified, using default: `{}`",
-                    Server::default_threads()
-                ),
+                "thread count not specified, using default: `{}`",
+                srv::defaults::default_threads()
             ));
-            Ok(CliOpt::Threads(Server::default_threads()))
+            Ok(CliOpt::Threads(srv::defaults::default_threads()))
         }
     }
     fn hide_timestamp(&mut self) -> Result<CliOpt> {
@@ -293,9 +293,9 @@ impl CliParser<'_> {
         if self.matches.is_present("https") {
             Ok(CliOpt::Https(true))
         } else {
-            self.backlog.push(LogRecord::new(
+            self.add_backlog(logf!(
                 LogLevel::Warning,
-                format!("https option not specified, using http"),
+                "https option not specified, using http"
             ));
             Ok(CliOpt::Https(false))
         }
@@ -339,7 +339,10 @@ impl CliParser<'_> {
 }
 
 impl Backlog for CliParser<'_> {
+    fn add_backlog(&mut self, v: LogRecord) {
+        self._backlog.push(v);
+    }
     fn backlog(&self) -> Vec<LogRecord> {
-        self.backlog.to_vec()
+        self._backlog.to_vec()
     }
 }

@@ -8,6 +8,7 @@
 // DONE - generate self-signed certificates for tls testing;
 // - implement https module;
 // - make socket operations actually multithreaded;
+// - restructure and make logger better;
 
 fn main() {
     twebd::cli::runner::run();

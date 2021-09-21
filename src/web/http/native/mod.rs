@@ -117,3 +117,9 @@ pub struct HttpResponse {
     pub header: HttpHeader,
     pub body: HttpBody,
 }
+
+impl HttpResponse {
+    pub fn add_header(&mut self, key: String, value: String) {
+        let _ = self.header.headers.insert(key, value);
+    }
+}

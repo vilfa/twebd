@@ -25,6 +25,6 @@ pub trait Build<T, U, E: Sized> {
 }
 
 pub trait Other {
-    fn add_other(&self, o: CliOpt);
+    fn add_other(&mut self, o: CliOpt);
     fn other(&self) -> Vec<CliOpt>;
 }

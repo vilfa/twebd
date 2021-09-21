@@ -1,45 +1,11 @@
 use crate::{
     log::{backlog::Backlog, LogRecord},
     web::http::{
-        get::HttpGetHandler, request::HttpRequest, HttpBody, HttpHeader, HttpMethod,
-        HttpResponseLine, HttpStatus, HttpVersion,
+        get::HttpGetHandler,
+        native::{HttpBody, HttpMethod, HttpRequest, HttpResponse, HttpStatus},
     },
 };
 use std::path::PathBuf;
-
-#[derive(Debug)]
-pub struct HttpResponse {
-    version: HttpVersion,
-    status: HttpStatus,
-    header: HttpHeader,
-    body: HttpBody,
-}
-
-impl<'a> HttpResponse {
-    pub fn as_buf(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::new();
-        let bufs = vec![
-            HttpResponseLine::new(self.version, self.status).as_buf(),
-            self.header.as_buf(),
-            self.body.as_buf(),
-        ];
-        for mut b in bufs {
-            buf.append(&mut b);
-        }
-        buf
-    }
-}
-
-impl Default for HttpResponse {
-    fn default() -> Self {
-        HttpResponse {
-            version: HttpVersion::default(),
-            status: HttpStatus::default(),
-            header: HttpHeader::default(),
-            body: HttpBody::default(),
-        }
-    }
-}
 
 pub struct HttpResponseBuilder<'a> {
     request: &'a HttpRequest,
@@ -77,7 +43,7 @@ impl<'a> HttpResponseBuilder<'a> {
                     .header
                     .headers
                     .insert(String::from("Content-Length"), format!("{}", v.size()));
-                response.body = HttpBody::from(v.as_string());
+                response.body = HttpBody::new(v.as_string());
                 response
             }
             Err(e) => {
@@ -94,11 +60,4 @@ impl Backlog for HttpResponseBuilder<'_> {
     fn backlog(&self) -> Vec<LogRecord> {
         self.backlog.to_vec()
     }
-}
-
-#[derive(Debug)]
-pub enum HttpResponseError {
-    FileReaderError(std::io::Error),
-    FilePathInvalid(String),
-    FileNotFound(String),
 }

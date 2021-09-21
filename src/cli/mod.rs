@@ -18,3 +18,13 @@ pub enum CliOpt {
     HttpsCert(PathBuf),
     HttpsPrivKey(PathBuf),
 }
+
+pub trait Build<T, U, E: Sized> {
+    fn from(opts: Vec<CliOpt>) -> T;
+    fn build(&self) -> std::result::Result<U, E>;
+}
+
+pub trait Other {
+    fn add_other(&self, o: CliOpt);
+    fn other(&self) -> Vec<CliOpt>;
+}

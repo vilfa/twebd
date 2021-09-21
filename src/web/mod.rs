@@ -1,2 +1,2 @@
 pub mod http;
-pub mod secure;
+pub mod https;

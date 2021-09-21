@@ -1,6 +1,6 @@
 use crate::{
     srv::file::{File, FileReader},
-    web::http::response::HttpResponseError,
+    web::http::err::HttpResponseError,
 };
 use std::path::PathBuf;
 

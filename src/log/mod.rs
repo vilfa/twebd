@@ -1,83 +1,54 @@
-pub mod backlog;
 pub mod config;
-pub mod logger;
-pub mod write;
+pub mod default;
+pub mod display;
+pub mod native;
 
-use chrono::prelude::*;
+use crate::log::{
+    config::Config,
+    native::{LogLevel, LogRecord},
+};
+use std::{
+    io::{stderr, stdout, Write},
+    sync::Mutex,
+};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum LogLevel {
-    Off = 0,
-    Error = 1,
-    Warning = 2,
-    Info = 3,
-    Debug = 4,
-}
-
-impl Default for LogLevel {
-    fn default() -> Self {
-        Self::Info
-    }
-}
-
-impl From<u8> for LogLevel {
-    fn from(log_level: u8) -> Self {
-        match log_level {
-            0 => Self::Off,
-            1 => Self::Error,
-            2 => Self::Warning,
-            3 => Self::Info,
-            4 => Self::Debug,
-            _ => Self::default(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct LogRecord {
-    pub timestamp: DateTime<Local>,
+pub struct Logger {
     pub log_level: LogLevel,
-    pub msg: String,
+    pub config: Config,
+    out_lock: Mutex<()>,
 }
 
-impl LogRecord {
-    pub fn new(log_level: LogLevel, msg: String) -> LogRecord {
-        LogRecord {
-            timestamp: Local::now(),
-            log_level,
-            msg,
+impl Logger {
+    pub fn new() -> Logger {
+        Logger {
+            log_level: LogLevel::default(),
+            config: Config::default(),
+            out_lock: Mutex::new(()),
         }
     }
-}
-
-pub enum LoggerConfigureMessage {
-    SetLogLevel(LogLevel),
-    ShowTimestamp(bool),
-    ShowLogLevel(bool),
-}
-
-pub enum Color {
-    None,
-    Red,
-    Yellow,
-    Blue,
-    Green,
-}
-
-impl Color {
-    pub fn color(color: &Color, msg: &str) -> String {
-        match color {
-            Color::Red => format!("\u{001b}[31;1m{}\u{001b}[0m", msg),
-            Color::Yellow => format!("\u{001b}[33;1m{}\u{001b}[0m", msg),
-            Color::Blue => format!("\u{001b}[34;1m{}\u{001b}[0m", msg),
-            Color::Green => format!("\u{001b}[32;1m{}\u{001b}[0m", msg),
-            Color::None => format!("\u{001b}[0m{}\u{001b}[0m", msg),
+    pub fn log(&self, record: LogRecord) {
+        if self.loggable(&record) {
+            let _lock = self.out_lock.lock().unwrap();
+            match record.log_level {
+                LogLevel::Error => {
+                    let stderr = stderr();
+                    let mut stderr_lock = stderr.lock();
+                    let _ = write!(&mut stderr_lock, "{}", record);
+                }
+                _ => {
+                    let stdout = stdout();
+                    let mut stdout_lock = stdout.lock();
+                    let _ = write!(&mut stdout_lock, "{}", record);
+                }
+            }
         }
     }
+    fn loggable(&self, record: &LogRecord) -> bool {
+        record.log_level as u8 <= self.log_level as u8
+    }
 }
 
-impl Default for Color {
-    fn default() -> Self {
-        Self::None
-    }
+pub trait Backlog {
+    fn add_backlog(&mut self, v: LogRecord);
+    fn backlog(&self) -> Vec<LogRecord>;
 }

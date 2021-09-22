@@ -1,5 +1,5 @@
 use crate::{
-    log::{LogRecord, LoggerConfigureMessage},
+    log::{config::LoggerConfigureMessage, native::LogRecord},
     syn::worker::Job,
 };
 

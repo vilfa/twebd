@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::{backlog::Backlog, LogRecord},
+    log::{native::LogRecord, Backlog},
     web::https::err::TlsConfigError,
 };
 use rustls::internal::pemfile;

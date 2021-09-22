@@ -1,6 +1,9 @@
 use crate::{
     cli::CliOpt,
-    log::{backlog::Backlog, LogLevel, LogRecord},
+    log::{
+        native::{LogLevel, LogRecord},
+        Backlog,
+    },
     net::DataProtocol,
     srv, APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };

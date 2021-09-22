@@ -1,8 +1,8 @@
 use crate::{
     log::{
-        config::Configure,
-        logger::{Log, Logger},
-        LogLevel, LogRecord, LoggerConfigureMessage,
+        config::{Configure, LoggerConfigureMessage},
+        native::LogLevel,
+        Logger,
     },
     syn::message::Message,
 };
@@ -32,18 +32,20 @@ impl Worker {
             match message {
                 Message::Job(job) => {
                     logger
-                        .send(Message::Log(LogRecord::new(
+                        .send(Message::Log(logf!(
                             LogLevel::Debug,
-                            format!("worker {} got a job. executing", id),
+                            "worker {} got a job. executing",
+                            id
                         )))
                         .unwrap();
                     job();
                 }
                 Message::Terminate => {
                     logger
-                        .send(Message::Log(LogRecord::new(
+                        .send(Message::Log(logf!(
                             LogLevel::Debug,
-                            format!("worker {} got a terminate message. terminating", id),
+                            "worker {} got a terminate message. terminating",
+                            id
                         )))
                         .unwrap();
                     break;
@@ -74,37 +76,34 @@ impl LogWorker {
                 Message::Log(record) => logger.log(record),
                 Message::LogConfigure(c) => match c {
                     LoggerConfigureMessage::SetLogLevel(v) => {
-                        logger.log(LogRecord::new(
+                        logger.log(logf!(
                             LogLevel::Info,
-                            format!("configure logging. setting log level: `{:?}`", &v),
+                            "configure logging. setting log level: `{:?}`",
+                            &v
                         ));
                         logger.set_log_level(v)
                     }
                     LoggerConfigureMessage::ShowLogLevel(v) => {
-                        logger.log(LogRecord::new(
+                        logger.log(logf!(
                             LogLevel::Info,
-                            format!(
-                                "configure logging. setting log level visibility: `{:?}`",
-                                &v
-                            ),
+                            "configure logging. setting log level visibility: `{:?}`",
+                            &v
                         ));
                         logger.show_log_level(v)
                     }
                     LoggerConfigureMessage::ShowTimestamp(v) => {
-                        logger.log(LogRecord::new(
+                        logger.log(logf!(
                             LogLevel::Info,
-                            format!(
-                                "configure logging. setting timestamp visibility: `{:?}`",
-                                &v
-                            ),
+                            "configure logging. setting timestamp visibility: `{:?}`",
+                            &v
                         ));
                         logger.show_timestamp(v)
                     }
                 },
                 Message::Terminate => {
-                    logger.log(LogRecord::new(
+                    logger.log(logf!(
                         LogLevel::Debug,
-                        format!("log worker got a terminate message. terminating"),
+                        "log worker got a terminate message. terminating"
                     ));
                     break;
                 }

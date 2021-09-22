@@ -1,10 +1,6 @@
 use crate::{
     cli::parser,
-    log::{
-        backlog::Backlog,
-        logger::{Log, Logger},
-        LogLevel, LogRecord,
-    },
+    log::{native::LogLevel, Backlog, Logger},
     srv::server::Server,
 };
 
@@ -18,9 +14,9 @@ pub fn run() {
                 server.listen();
             }
             Err(e) => {
-                Logger::new().log(LogRecord::new(LogLevel::Error, format!("{:?}", e)));
+                Logger::new().log(logf!(LogLevel::Error, "{:?}", e));
             }
         },
-        Err(e) => Logger::new().log(LogRecord::new(LogLevel::Error, format!("{:?}", e))),
+        Err(e) => Logger::new().log(logf!(LogLevel::Error, "{:?}", e)),
     }
 }

@@ -1,19 +1,19 @@
 use crate::{
     cli::CliOpt,
-    log::{backlog::Backlog, LogLevel},
+    log::{
+        native::{LogLevel, LogRecord},
+        Backlog,
+    },
     net::{
         socket::{Socket, SocketBuilder},
         tcp::TcpSocketIo,
         udp::UdpSocketIo,
     },
-    srv::file::ServerRootBuilder,
+    srv::err::ServerError,
     syn::thread::{ThreadPool, ThreadPoolBuilder},
     web::{
-        http::{
-            request::{HttpParseError, HttpRequest, HttpRequestParser},
-            response::{HttpResponse, HttpResponseBuilder, HttpResponseError},
-        },
-        secure::tls::{TlsConfigBuilder, TlsConfigError},
+        http::native::{HttpRequest, HttpResponse},
+        https::tls::TlsConfigBuilder,
     },
 };
 use std::{
@@ -49,13 +49,11 @@ impl Server {
         let thread_pool = pool_builder.thread_pool();
         let server_root = root_builder.root();
 
-        backlog.push(LogRecord::new(
+        backlog.push(logf!(
             LogLevel::Info,
-            format!(
-                "initialized thread pool with: {} worker thread(s), {} log thread(s)",
-                thread_pool.size().0,
-                thread_pool.size().1
-            ),
+            "initialized thread pool with: {} worker thread(s), {} log thread(s)",
+            thread_pool.size().0,
+            thread_pool.size().1
         ));
 
         if tls_builder.https_enabled() {
@@ -78,7 +76,7 @@ impl Server {
         }
     }
     pub fn listen(&self) {
-        self.log(LogRecord::new(LogLevel::Info, format!("starting server")));
+        self.log(logf!(LogLevel::Info, "starting server"));
         match &self.socket {
             Socket::Tcp(socket) => {
                 if self.is_https() {
@@ -87,66 +85,59 @@ impl Server {
                         rustls::ServerSession::new(&(self.tls_config.as_ref().unwrap()));
                 } else {
                 }
-                // self.log(LogRecord::new(
-                //     LogLevel::Info,
-                //     format!("listening for connections on socket: `{:?}`", &socket),
-                // ));
+                self.log(logf!(
+                    LogLevel::Info,
+                    "listening for connections on socket: `{:?}`",
+                    &socket
+                ));
                 for stream in socket.read() {
-                    // self.log(LogRecord::new(
-                    //     LogLevel::Info,
-                    //     format!("tcp listener got a connection: `{:?}`", &stream),
-                    // ));
+                    self.log(logf!(
+                        LogLevel::Info,
+                        "tcp listener got a connection: `{:?}`",
+                        &stream
+                    ));
                     let mut stream = stream.unwrap();
                     match self.handle_conn(&mut stream) {
                         Ok(v) => {
                             let _ = stream.write(&v);
-                            // self.log(LogRecord::new(
-                            //     LogLevel::Info,
-                            //     format!("handle conn: sent response"),
-                            // ));
-                            // self.log(LogRecord::new(
-                            //     LogLevel::Debug,
-                            //     format!(
-                            //         "handle conn: sent response: `{:?}`",
-                            //         String::from_utf8_lossy(&v)
-                            //     ),
-                            // ))
+                            self.log(logf!(LogLevel::Info, "handle conn: sent response"));
+                            self.log(logf!(
+                                LogLevel::Debug,
+                                "handle conn: sent response: `{:?}`",
+                                String::from_utf8_lossy(&v)
+                            ))
                         }
-                        Err(e) => self.log(LogRecord::new(
-                            LogLevel::Error,
-                            format!("error handling conn: {:?}", e),
-                        )),
+                        Err(e) => logf!(LogLevel::Error, "error handling conn: {:?}", e),
                     }
                 }
             }
             Socket::Udp(socket) => {
-                // self.log(LogRecord::new(
-                //     LogLevel::Info,
-                //     format!("listening for connections on socket: `{:?}`", &socket),
-                // ));
+                self.log(logf!(
+                    LogLevel::Info,
+                    "listening for connections on socket: `{:?}`",
+                    &socket
+                ));
                 loop {
                     let mut buf: [u8; 512] = [0; 512];
                     match socket.read(&mut buf) {
                         Ok((bytes, addr)) => {
-                            // self.log(LogRecord::new(
-                            //     LogLevel::Info,
-                            //     format!("read {} bytes from socket address: `{:?}`", bytes, addr),
-                            // ));
-                            // self.log(LogRecord::new(
-                            //     LogLevel::Debug,
-                            //     format!("bytes recv: `{:?}`", &buf[0..bytes]),
-                            // ));
-                            // self.log(LogRecord::new(
-                            //     LogLevel::Debug,
-                            //     format!(
-                            //         "bytes recv as chars: `{:?}`",
-                            //         String::from_utf8_lossy(&buf[0..bytes])
-                            //     ),
-                            // ));
+                            self.log(logf!(
+                                LogLevel::Info,
+                                "read {} bytes from socket address: `{:?}`",
+                                bytes,
+                                addr
+                            ));
+                            self.log(logf!(LogLevel::Debug, "bytes recv: `{:?}`", &buf[0..bytes]));
+                            self.log(logf!(
+                                LogLevel::Debug,
+                                "bytes recv as chars: `{:?}`",
+                                String::from_utf8_lossy(&buf[0..bytes])
+                            ));
                         }
-                        Err(e) => self.log(LogRecord::new(
+                        Err(e) => self.log(logf!(
                             LogLevel::Error,
-                            format!("couldn't read from udp socket: `{}`", e),
+                            "couldn't read from udp socket: `{}`",
+                            e
                         )),
                     }
                 }
@@ -174,9 +165,10 @@ impl Server {
     fn parse_request(&self, buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
         let request_parser = HttpRequestParser::new(buf)?;
         let (request, backlog) = (request_parser.request()?, request_parser.backlog());
-        self.log(LogRecord::new(
+        self.log(logf!(
             LogLevel::Debug,
-            format!("handle conn: parsed request: {:?}", &request),
+            "handle conn: parsed request: {:?}",
+            &request
         ));
         for rec in backlog {
             self.log(rec);
@@ -186,9 +178,10 @@ impl Server {
     fn build_response(&self, req: &HttpRequest) -> Result<HttpResponse, ServerError> {
         let response_builder = HttpResponseBuilder::new(req, &self.server_root);
         let (response, backlog) = (response_builder.response(), response_builder.backlog());
-        self.log(LogRecord::new(
+        self.log(logf!(
             LogLevel::Debug,
-            format!("handle conn: built response: {:?}", &response),
+            "handle conn: built response: {:?}",
+            &response
         ));
         for rec in backlog {
             self.log(rec)

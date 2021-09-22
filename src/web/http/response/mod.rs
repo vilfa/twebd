@@ -6,7 +6,7 @@ use crate::web::http::{
 };
 use std::path::PathBuf;
 
-impl HandleResponse<HttpResponse> for HttpHandler {
+impl HandleResponse<HttpResponse> for HttpHandler<HttpResponse> {
     fn handle(request: &HttpRequest, srv_root: &PathBuf) -> HttpResponse {
         match request.method {
             HttpMethod::Get => response::get::get(&request.uri, srv_root),

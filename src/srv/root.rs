@@ -10,7 +10,7 @@ pub struct ServerRootBuilder {
 }
 
 impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
-    fn from(opts: Vec<CliOpt>) -> Self {
+    fn new(opts: Vec<CliOpt>) -> Self {
         let mut server_root_builder = Self::default();
         for opt in opts {
             match opt {

@@ -3,8 +3,13 @@ pub mod parse;
 
 use crate::web::http::{consts, err::HttpParseError};
 
-pub trait Parse<T, V, E: Sized> {
-    fn parse(v: V) -> std::result::Result<T, E>;
+pub trait Parse<T, V, E>
+where
+    T: Sized,
+    V: Sized,
+    E: Sized,
+{
+    fn parse(v: T) -> std::result::Result<V, E>;
 }
 
 pub trait ToBuf {

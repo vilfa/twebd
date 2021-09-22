@@ -160,10 +160,7 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
-                "address not specified, using default: `127.0.0.1`"
-            ));
+            warn!("address not specified, using default: `127.0.0.1`");
             Ok(CliOpt::Address(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))))
         }
     }
@@ -177,10 +174,7 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
-                "port not specified, using default: `8080`"
-            ));
+            warn!("port not specified, using default: `8080`");
             Ok(CliOpt::Port(8080))
         }
     }
@@ -195,10 +189,7 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
-                "data protocol not specified, using default: `tcp`"
-            ));
+            warn!("data protocol not specified, using default: `tcp`");
             Ok(CliOpt::Protocol(DataProtocol::Tcp))
         }
     }
@@ -214,10 +205,7 @@ impl CliParser<'_> {
                 ))
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
-                "directory not specified, using default: `./public`"
-            ));
+            warn!("directory not specified, using default: `./public`");
             Ok(CliOpt::Directory(PathBuf::from("./public")))
         }
     }
@@ -226,14 +214,7 @@ impl CliParser<'_> {
             match v.parse::<u8>() {
                 Ok(v) => {
                     if v > LogLevel::Debug as u8 {
-                        self.add_backlog(logf!(
-                            LogLevel::Warning,
-                            "unknown log level, using default"
-                        ));
-                        self.add_backlog(logf!(
-                            LogLevel::Warning,
-                            "unknown log level, using default"
-                        ))
+                        warn!("unknown log level, using default");
                     }
                     Ok(CliOpt::Verbosity(LogLevel::from(v)))
                 }
@@ -243,11 +224,10 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
+            warn!(
                 "log level not specified, using default: `{:?}`",
                 LogLevel::default()
-            ));
+            );
             Ok(CliOpt::Verbosity(LogLevel::default()))
         }
     }
@@ -256,12 +236,11 @@ impl CliParser<'_> {
             match v.parse::<usize>() {
                 Ok(v) => {
                     if v > srv::defaults::max_threads() {
-                        self.add_backlog(logf!(
-                            LogLevel::Warning,
+                        warn!(
                             "max thread count is {}, using default. got: `{}`",
                             srv::defaults::max_threads(),
                             v
-                        ));
+                        );
                     }
                     Ok(CliOpt::Threads(std::cmp::min(
                         v,
@@ -274,11 +253,10 @@ impl CliParser<'_> {
                 )),
             }
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
+            warn!(
                 "thread count not specified, using default: `{}`",
                 srv::defaults::default_threads()
-            ));
+            );
             Ok(CliOpt::Threads(srv::defaults::default_threads()))
         }
     }
@@ -296,10 +274,7 @@ impl CliParser<'_> {
         if self.matches.is_present("https") {
             Ok(CliOpt::Https(true))
         } else {
-            self.add_backlog(logf!(
-                LogLevel::Warning,
-                "https option not specified, using http"
-            ));
+            warn!("https option not specified, using http");
             Ok(CliOpt::Https(false))
         }
     }

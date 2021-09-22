@@ -19,7 +19,7 @@ pub struct TlsConfig {
 }
 
 impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
-    fn from(opts: Vec<CliOpt>) -> Self {
+    fn new(opts: Vec<CliOpt>) -> Self {
         let mut tls_config_builder = Self::default();
         for opt in opts {
             match opt {

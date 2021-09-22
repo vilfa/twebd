@@ -8,7 +8,7 @@ use crate::web::http::{
 };
 use std::result::Result;
 
-impl HandleRequest<HttpRequest, HttpParseError> for HttpHandler {
+impl HandleRequest<HttpRequest, HttpParseError> for HttpHandler<HttpRequest> {
     fn handle(buf: &'static mut [u8]) -> Result<HttpRequest, HttpParseError> {
         let sbuf = interop::buffer_to_string(buf)?;
         let mut tokens = interop::string_into_tokens(&sbuf);

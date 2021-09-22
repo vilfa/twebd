@@ -8,13 +8,13 @@ use std::{collections::HashMap, path::PathBuf, result::Result};
 
 type E = HttpParseError;
 
-impl Parse<Self, Vec<String>, E> for HttpBody {
+impl Parse<Vec<String>, Self, E> for HttpBody {
     fn parse(v: Vec<String>) -> Result<Self, E> {
         Ok(Self { tokens: v })
     }
 }
 
-impl Parse<Self, Vec<String>, E> for HttpHeader {
+impl Parse<Vec<String>, Self, E> for HttpHeader {
     fn parse(v: Vec<String>) -> Result<Self, E> {
         let mut headers = HashMap::new();
         for token in v {
@@ -40,7 +40,7 @@ impl Parse<Self, Vec<String>, E> for HttpHeader {
     }
 }
 
-impl Parse<Self, Vec<String>, E> for HttpLine {
+impl Parse<Vec<String>, Self, E> for HttpLine {
     fn parse(v: Vec<String>) -> Result<Self, E> {
         match v.len() {
             3 => Ok(HttpLine {
@@ -56,7 +56,7 @@ impl Parse<Self, Vec<String>, E> for HttpLine {
     }
 }
 
-impl Parse<Self, &String, E> for HttpMethod {
+impl Parse<&String, Self, E> for HttpMethod {
     fn parse(v: &String) -> Result<Self, E> {
         match &v.to_uppercase()[..] {
             "OPTIONS" => Ok(HttpMethod::Options),
@@ -76,7 +76,7 @@ impl Parse<Self, &String, E> for HttpMethod {
     }
 }
 
-impl Parse<Self, &String, E> for HttpVersion {
+impl Parse<&String, Self, E> for HttpVersion {
     fn parse(v: &String) -> Result<Self, E> {
         match &v.to_uppercase()[..] {
             "HTTP/1.1" => Ok(HttpVersion::Http11),

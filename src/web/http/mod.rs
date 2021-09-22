@@ -7,12 +7,19 @@ pub mod response;
 
 use crate::web::http;
 
-pub struct HttpHandler;
+pub struct HttpHandler<T>;
 
-pub trait HandleRequest<T, E: Sized> {
-    fn handle(buf: &'static mut [u8]) -> Result<T, E>;
+pub trait HandleRequest<V, E>
+where
+    V: Sized,
+    E: Sized,
+{
+    fn handle(buf: &'static mut [u8]) -> Result<V, E>;
 }
 
-pub trait HandleResponse<T: Sized> {
-    fn handle(request: &http::native::HttpRequest, srv_root: &std::path::PathBuf) -> T;
+pub trait HandleResponse<V>
+where
+    V: Sized,
+{
+    fn handle(request: &http::native::HttpRequest, srv_root: &std::path::PathBuf) -> V;
 }

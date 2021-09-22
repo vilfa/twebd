@@ -1,11 +1,12 @@
 use crate::{
-    cli::CliOpt,
+    cli::{Build, CliOpt, Other},
     log::{
         config::LoggerConfigureMessage,
         native::{LogLevel, LogRecord},
     },
     srv::defaults,
     syn::{
+        err::ThreadPoolError,
         message::Message,
         worker::{LogWorker, Tx, Worker},
     },
@@ -100,33 +101,38 @@ pub struct ThreadPoolBuilder {
     show_loglevel: bool,
     show_timestamp: bool,
     pool_size: usize,
-    other: Vec<CliOpt>,
+    _other: Vec<CliOpt>,
 }
 
-impl ThreadPoolBuilder {
-    pub fn new(opts: Vec<CliOpt>) -> ThreadPoolBuilder {
-        let mut pool_builder = Self::default();
+impl Build<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
+    fn new(opts: Vec<CliOpt>) -> Self {
+        let mut thread_pool_builder = Self::default();
         for opt in opts {
             match opt {
-                CliOpt::Verbosity(v) => pool_builder.log_level = v,
-                CliOpt::Threads(v) => pool_builder.pool_size = v,
-                CliOpt::ShowLoglevel(v) => pool_builder.show_loglevel = v,
-                CliOpt::ShowTimestamp(v) => pool_builder.show_timestamp = v,
-                cli_opt => pool_builder.other.push(cli_opt.to_owned()),
+                CliOpt::Verbosity(v) => thread_pool_builder.log_level = v,
+                CliOpt::Threads(v) => thread_pool_builder.pool_size = v,
+                CliOpt::ShowLoglevel(v) => thread_pool_builder.show_loglevel = v,
+                CliOpt::ShowTimestamp(v) => thread_pool_builder.show_timestamp = v,
+                cli_opt => thread_pool_builder.add_other(cli_opt.to_owned()),
             }
         }
+        thread_pool_builder
+    }
+    fn build(&self) -> Result<ThreadPool, ThreadPoolError> {
+        let thread_pool = ThreadPool::new(self.pool_size);
+        thread_pool.log_conf(LoggerConfigureMessage::SetLogLevel(self.log_level));
+        thread_pool.log_conf(LoggerConfigureMessage::ShowLogLevel(self.show_loglevel));
+        thread_pool.log_conf(LoggerConfigureMessage::ShowTimestamp(self.show_timestamp));
+        Ok(thread_pool)
+    }
+}
 
-        pool_builder
+impl Other for ThreadPoolBuilder {
+    fn add_other(&mut self, o: CliOpt) {
+        self._other.push(o);
     }
-    pub fn thread_pool(&self) -> ThreadPool {
-        let pool = ThreadPool::new(self.pool_size);
-        pool.log_conf(LoggerConfigureMessage::SetLogLevel(self.log_level));
-        pool.log_conf(LoggerConfigureMessage::ShowLogLevel(self.show_loglevel));
-        pool.log_conf(LoggerConfigureMessage::ShowTimestamp(self.show_timestamp));
-        pool
-    }
-    pub fn other(&self) -> Vec<CliOpt> {
-        self.other.to_vec()
+    fn other(&self) -> Vec<CliOpt> {
+        self._other.to_vec()
     }
 }
 
@@ -137,7 +143,7 @@ impl Default for ThreadPoolBuilder {
             show_loglevel: true,
             show_timestamp: true,
             pool_size: defaults::default_threads(),
-            other: Vec::new(),
+            _other: Vec::new(),
         }
     }
 }

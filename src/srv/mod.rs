@@ -1,11 +1,9 @@
-pub mod defaults;
 pub mod err;
 pub mod file;
 pub mod http;
 pub mod https;
 pub mod root;
 
-pub use defaults::{default_threads, max_threads};
 pub use err::{ServerError, ServerRootError};
 pub use file::{File, FileReader};
 pub use http::HttpServer;

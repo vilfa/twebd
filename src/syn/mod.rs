@@ -6,4 +6,4 @@ pub mod worker;
 pub use err::ThreadPoolError;
 pub use message::Message;
 pub use thread::{ThreadPool, ThreadPoolBuilder};
-pub use worker::{Job, LogWorker, Rx, Tx, Worker};
+pub use worker::{Job, Rx, Tx, Worker};

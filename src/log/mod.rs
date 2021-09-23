@@ -47,8 +47,3 @@ impl Logger {
         record.log_level as u8 <= self.log_level as u8
     }
 }
-
-pub trait Backlog {
-    fn add_backlog(&mut self, v: LogRecord);
-    fn backlog(&self) -> Vec<LogRecord>;
-}

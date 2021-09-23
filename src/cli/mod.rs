@@ -1,10 +1,10 @@
 pub mod parser;
 pub mod runner;
 
-pub use parser::{parse_args, parse_matches};
+pub use parser::{parse_args, parse_matches, CliConfig};
 pub use runner::run;
 
-use crate::{log::LogLevel, net::DataProtocol};
+use crate::net::DataProtocol;
 use std::{net::IpAddr, path::PathBuf};
 
 #[derive(Debug, Clone)]
@@ -13,7 +13,7 @@ pub enum CliOpt {
     Port(u16),
     Protocol(DataProtocol),
     Directory(PathBuf),
-    Verbosity(LogLevel),
+    Verbosity(log::LevelFilter),
     Threads(usize),
     ShowTimestamp(bool),
     ShowLoglevel(bool),

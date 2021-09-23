@@ -1,6 +1,5 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::LogRecord,
     net::{Socket, SocketBuilder, TcpSocketIo},
     srv::{Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
@@ -9,6 +8,7 @@ use crate::{
         TlsConfigBuilder, ToBuf,
     },
 };
+use log::error;
 use rustls::Session;
 use std::{
     io::{Read, Write},
@@ -20,7 +20,6 @@ pub struct HttpsServer {
     threads: ThreadPool,
     root: std::sync::Arc<PathBuf>,
     tls_config: TlsConfig,
-    _backlog: Vec<LogRecord>,
 }
 
 impl Server<Self, ServerError> for HttpsServer {
@@ -40,7 +39,6 @@ impl Server<Self, ServerError> for HttpsServer {
             threads,
             root: std::sync::Arc::new(root),
             tls_config,
-            _backlog: Vec::new(),
         }
     }
     fn listen(&self) {
@@ -59,7 +57,9 @@ impl Server<Self, ServerError> for HttpsServer {
                                 let _ = session.write(&buf);
                                 let _ = session.write_tls(&mut stream);
                             }
-                            Err(e) => {}
+                            Err(e) => {
+                                error!("error handling https connection: `{:?}`", e);
+                            }
                         }
                     })
                 }
@@ -74,7 +74,7 @@ fn handle(
     root: std::sync::Arc<PathBuf>,
 ) -> Result<Vec<u8>, ServerError> {
     let mut buf = Vec::new();
-    session.read_to_end(&mut buf);
+    let _ = session.read_to_end(&mut buf);
     let req = request(&mut buf)?;
     let resp = response(&req, &root);
     Ok(resp.to_buf())

@@ -1,11 +1,11 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::LogRecord,
     net::{Socket, SocketBuilder, TcpSocketIo, UdpSocketIo},
     srv::{Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse, ToBuf},
 };
+use log::{error, info};
 use std::{
     io::{BufRead, BufReader, Write},
     net::TcpStream,
@@ -16,7 +16,6 @@ pub struct HttpServer {
     socket: Socket,
     threads: ThreadPool,
     root: std::sync::Arc<PathBuf>,
-    _backlog: Vec<LogRecord>,
 }
 
 impl Server<Self, ServerError> for HttpServer {
@@ -33,7 +32,6 @@ impl Server<Self, ServerError> for HttpServer {
             socket,
             threads,
             root: std::sync::Arc::new(root),
-            _backlog: Vec::new(),
         }
     }
     fn listen(&self) {
@@ -47,7 +45,9 @@ impl Server<Self, ServerError> for HttpServer {
                             Ok(buf) => {
                                 let _ = stream.write(&buf);
                             }
-                            Err(e) => {}
+                            Err(e) => {
+                                error!("error reading tcp stream: `{:?}`", e);
+                            }
                         }
                     })
                 }
@@ -55,8 +55,15 @@ impl Server<Self, ServerError> for HttpServer {
             Socket::Udp(socket) => loop {
                 let mut buf: [u8; 512] = [0; 512];
                 match socket.read(&mut buf) {
-                    Ok((size, addr)) => {}
-                    Err(e) => {}
+                    Ok((size, addr)) => {
+                        info!(
+                            "received a udp message: size `{:?}` from `{:?}`",
+                            size, addr
+                        );
+                    }
+                    Err(e) => {
+                        error!("error reading udp message: `{:?}`", e);
+                    }
                 }
             },
         }

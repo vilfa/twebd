@@ -13,5 +13,5 @@
 // - look into once for logger;
 
 fn main() {
-    twebd::cli::run();
+    twebd::run();
 }

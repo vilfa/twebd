@@ -1,6 +1,5 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::{Backlog, LogRecord},
     web::TlsConfigError,
 };
 use rustls::internal::pemfile;
@@ -11,7 +10,6 @@ pub struct TlsConfigBuilder {
     cert_path: PathBuf,
     priv_key_path: PathBuf,
     _other: Vec<CliOpt>,
-    _backlog: Vec<LogRecord>,
 }
 
 pub struct TlsConfig {
@@ -51,15 +49,6 @@ impl Other for TlsConfigBuilder {
     }
 }
 
-impl Backlog for TlsConfigBuilder {
-    fn add_backlog(&mut self, v: LogRecord) {
-        self._backlog.push(v);
-    }
-    fn backlog(&self) -> Vec<LogRecord> {
-        self._backlog.to_vec()
-    }
-}
-
 impl Default for TlsConfigBuilder {
     fn default() -> Self {
         TlsConfigBuilder {
@@ -67,7 +56,6 @@ impl Default for TlsConfigBuilder {
             cert_path: PathBuf::new(),
             priv_key_path: PathBuf::new(),
             _other: Vec::new(),
-            _backlog: Vec::new(),
         }
     }
 }

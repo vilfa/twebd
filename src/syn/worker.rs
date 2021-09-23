@@ -1,7 +1,5 @@
-use crate::{
-    log::{Configure, LogLevel, Logger, LoggerConfigureMessage},
-    syn::Message,
-};
+use crate::syn::Message;
+use log::debug;
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread,
@@ -17,7 +15,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(id: usize, receiver: Rx, logger: Tx) -> Worker {
+    pub fn new(id: usize, receiver: Rx) -> Worker {
         let thread = thread::spawn(move || loop {
             let message = receiver
                 .lock()
@@ -27,89 +25,18 @@ impl Worker {
 
             match message {
                 Message::Job(job) => {
-                    logger
-                        .send(Message::Log(logf!(
-                            LogLevel::Debug,
-                            "worker {} got a job. executing",
-                            id
-                        )))
-                        .unwrap();
+                    debug!("worker {} got a job. executing", id);
                     job();
                 }
                 Message::Terminate => {
-                    logger
-                        .send(Message::Log(logf!(
-                            LogLevel::Debug,
-                            "worker {} got a terminate message. terminating",
-                            id
-                        )))
-                        .unwrap();
+                    debug!("worker {} got a terminate message. terminating", id);
                     break;
                 }
-                _ => {}
             }
         });
         Worker {
             id,
             thread: Some(thread),
-        }
-    }
-}
-
-pub struct LogWorker {
-    pub id: usize,
-    pub thread: Option<thread::JoinHandle<()>>,
-    pub sender: Tx,
-}
-
-impl LogWorker {
-    pub fn new(id: usize) -> LogWorker {
-        let (sender, receiver) = mpsc::channel::<Message>();
-        let mut logger = Logger::new();
-        let thread = thread::spawn(move || loop {
-            let message = receiver.recv().unwrap();
-            match message {
-                Message::Log(record) => logger.log(record),
-                Message::LogConfigure(c) => match c {
-                    LoggerConfigureMessage::SetLogLevel(v) => {
-                        logger.log(logf!(
-                            LogLevel::Info,
-                            "configure logging. setting log level: `{:?}`",
-                            &v
-                        ));
-                        logger.set_log_level(v)
-                    }
-                    LoggerConfigureMessage::ShowLogLevel(v) => {
-                        logger.log(logf!(
-                            LogLevel::Info,
-                            "configure logging. setting log level visibility: `{:?}`",
-                            &v
-                        ));
-                        logger.show_log_level(v)
-                    }
-                    LoggerConfigureMessage::ShowTimestamp(v) => {
-                        logger.log(logf!(
-                            LogLevel::Info,
-                            "configure logging. setting timestamp visibility: `{:?}`",
-                            &v
-                        ));
-                        logger.show_timestamp(v)
-                    }
-                },
-                Message::Terminate => {
-                    logger.log(logf!(
-                        LogLevel::Debug,
-                        "log worker got a terminate message. terminating"
-                    ));
-                    break;
-                }
-                _ => {}
-            }
-        });
-        LogWorker {
-            id,
-            thread: Some(thread),
-            sender,
         }
     }
 }

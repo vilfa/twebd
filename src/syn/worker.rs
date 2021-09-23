@@ -1,10 +1,6 @@
 use crate::{
-    log::{
-        config::{Configure, LoggerConfigureMessage},
-        native::LogLevel,
-        Logger,
-    },
-    syn::message::Message,
+    log::{Configure, LogLevel, Logger, LoggerConfigureMessage},
+    syn::Message,
 };
 use std::{
     sync::{mpsc, Arc, Mutex},

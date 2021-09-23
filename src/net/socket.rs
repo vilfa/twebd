@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    net::{err::SocketError, tcp::TcpSocket, udp::UdpSocket, DataProtocol},
+    net::{DataProtocol, SocketError, TcpSocket, UdpSocket},
 };
 use std::net::{IpAddr, Ipv4Addr};
 

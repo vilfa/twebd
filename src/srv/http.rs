@@ -1,21 +1,13 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::native::LogRecord,
-    net::{
-        socket::{Socket, SocketBuilder},
-        tcp::TcpSocketIo,
-        udp::UdpSocketIo,
-    },
-    srv::{err::ServerError, root::ServerRootBuilder, Server},
-    syn::thread::{ThreadPool, ThreadPoolBuilder},
-    web::http::{
-        interop::ToBuf,
-        native::{HttpRequest, HttpResponse},
-        HandleRequest, HandleResponse, HttpHandler,
-    },
+    log::LogRecord,
+    net::{Socket, SocketBuilder, TcpSocketIo, UdpSocketIo},
+    srv::{Server, ServerError, ServerRootBuilder},
+    syn::{ThreadPool, ThreadPoolBuilder},
+    web::{HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse, ToBuf},
 };
 use std::{
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Write},
     net::TcpStream,
     path::PathBuf,
 };
@@ -45,7 +37,7 @@ impl Server<Self, ServerError> for HttpServer {
         }
     }
     fn listen(&self) {
-        match self.socket {
+        match &self.socket {
             Socket::Tcp(socket) => {
                 for stream in socket.read() {
                     let root = self.root.clone();
@@ -74,12 +66,12 @@ impl Server<Self, ServerError> for HttpServer {
 fn handle(data: &mut TcpStream, root: std::sync::Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
     let mut reader = BufReader::new(data);
     let mut buf = reader.fill_buf()?.to_vec();
-    let mut req = request(&mut buf)?;
+    let req = request(&mut buf)?;
     let resp = response(&req, &root);
     Ok(resp.to_buf())
 }
 
-fn request(buf: &'static mut [u8]) -> Result<HttpRequest, ServerError> {
+fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }
 

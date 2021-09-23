@@ -3,10 +3,10 @@ pub mod default;
 pub mod display;
 pub mod native;
 
-use crate::log::{
-    config::Config,
-    native::{LogLevel, LogRecord},
-};
+pub use config::{Config, Configure, LoggerConfigureMessage};
+pub use display::Color;
+pub use native::{LogLevel, LogRecord};
+
 use std::{
     io::{stderr, stdout, Write},
     sync::Mutex,

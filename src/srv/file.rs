@@ -1,4 +1,4 @@
-use crate::web::http::err::HttpResponseError;
+use crate::web::HttpResponseError;
 use std::{
     io::{BufReader, Read},
     path::PathBuf,

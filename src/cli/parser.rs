@@ -1,11 +1,9 @@
 use crate::{
+    app::{APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION},
     cli::CliOpt,
-    log::{
-        native::{LogLevel, LogRecord},
-        Backlog,
-    },
+    log::{Backlog, LogLevel, LogRecord},
     net::DataProtocol,
-    srv, APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
+    srv,
 };
 use clap::{App, Arg};
 use std::{
@@ -119,7 +117,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
         .get_matches()
 }
 
-pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>, Vec<LogRecord>)> {
+pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>, bool)> {
     let mut cli_parser = CliParser::new(matches);
     let cli_opts = vec![
         cli_parser.address()?,
@@ -130,12 +128,11 @@ pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<(Vec<CliOpt>,
         cli_parser.threads()?,
         cli_parser.hide_loglevel()?,
         cli_parser.hide_timestamp()?,
-        cli_parser.https()?,
         cli_parser.https_cert()?,
         cli_parser.https_priv_key()?,
     ];
 
-    Ok((cli_opts, cli_parser.backlog()))
+    Ok((cli_opts, matches!(cli_parser.https()?, CliOpt::Https(true))))
 }
 
 struct CliParser<'a> {
@@ -235,17 +232,14 @@ impl CliParser<'_> {
         if let Some(v) = self.matches.value_of("threads") {
             match v.parse::<usize>() {
                 Ok(v) => {
-                    if v > srv::defaults::max_threads() {
+                    if v > srv::max_threads() {
                         warn!(
                             "max thread count is {}, using default. got: `{}`",
-                            srv::defaults::max_threads(),
+                            srv::max_threads(),
                             v
                         );
                     }
-                    Ok(CliOpt::Threads(std::cmp::min(
-                        v,
-                        srv::defaults::max_threads(),
-                    )))
+                    Ok(CliOpt::Threads(std::cmp::min(v, srv::max_threads())))
                 }
                 Err(e) => Err(Error::new(
                     ErrorKind::InvalidInput,
@@ -255,9 +249,9 @@ impl CliParser<'_> {
         } else {
             warn!(
                 "thread count not specified, using default: `{}`",
-                srv::defaults::default_threads()
+                srv::default_threads()
             );
-            Ok(CliOpt::Threads(srv::defaults::default_threads()))
+            Ok(CliOpt::Threads(srv::default_threads()))
         }
     }
     fn hide_timestamp(&mut self) -> Result<CliOpt> {

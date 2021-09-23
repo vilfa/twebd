@@ -1,15 +1,8 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::{
-        config::LoggerConfigureMessage,
-        native::{LogLevel, LogRecord},
-    },
-    srv::defaults,
-    syn::{
-        err::ThreadPoolError,
-        message::Message,
-        worker::{LogWorker, Tx, Worker},
-    },
+    log::{LogLevel, LogRecord, LoggerConfigureMessage},
+    srv::default_threads,
+    syn::{LogWorker, Message, ThreadPoolError, Tx, Worker},
 };
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -142,7 +135,7 @@ impl Default for ThreadPoolBuilder {
             log_level: LogLevel::default(),
             show_loglevel: true,
             show_timestamp: true,
-            pool_size: defaults::default_threads(),
+            pool_size: default_threads(),
             _other: Vec::new(),
         }
     }

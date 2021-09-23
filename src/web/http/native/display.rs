@@ -1,4 +1,4 @@
-use crate::web::http::native::HttpStatus;
+use crate::web::HttpStatus;
 use std::fmt::{Display, Formatter, Result};
 
 impl Display for HttpStatus {

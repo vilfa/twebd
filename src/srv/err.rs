@@ -1,7 +1,4 @@
-use crate::web::{
-    http::err::{HttpParseError, HttpResponseError},
-    https::err::TlsConfigError,
-};
+use crate::web::{HttpParseError, HttpResponseError, TlsConfigError};
 
 #[derive(Debug)]
 pub enum ServerRootError {

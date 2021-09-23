@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    srv::err::ServerRootError,
+    srv::ServerRootError,
 };
 use std::path::PathBuf;
 

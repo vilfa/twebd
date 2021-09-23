@@ -7,9 +7,11 @@
 // DONE - implement simple http requests and responses;
 // DONE - generate self-signed certificates for tls testing;
 // - implement https module;
+// - implement https module error handling;
 // - make socket operations actually multithreaded;
 // - restructure and make logger better;
+// - look into once for logger;
 
 fn main() {
-    twebd::cli::runner::run();
+    twebd::cli::run();
 }

@@ -1,4 +1,5 @@
-pub const LOGGER: crate::log::Logger = crate::log::Logger::new();
+pub static LOGGER: crate::log::Logger = crate::log::Logger::new();
+pub static LOG_INIT: std::sync::Once = std::sync::Once::new();
 
 #[macro_export]
 macro_rules! logf {
@@ -10,42 +11,38 @@ macro_rules! logf {
 #[macro_export]
 macro_rules! err {
     ($fmt_str: expr $(, $fmt_arg: expr)*) => {
-        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Error, format!($fmt_str, $($fmt_arg),*)));
+        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Error, "{}", format!($fmt_str, $($fmt_arg),*)));
     };
 }
 
 #[macro_export]
 macro_rules! warn {
     ($fmt_str: expr $(, $fmt_arg: expr)*) => {
-        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Warning, format!($fmt_str, $($fmt_arg),*)));
+        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Warning, "{}", format!($fmt_str, $($fmt_arg),*)));
     };
 }
 
 #[macro_export]
 macro_rules! info {
     ($fmt_str: expr $(, $fmt_arg: expr)*) => {
-        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Info, format!($fmt_str, $($fmt_arg),*)));
+        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Info, "{}", format!($fmt_str, $($fmt_arg),*)));
     };
 }
 
 #[macro_export]
 macro_rules! dbg {
     ($fmt_str: expr $(, $fmt_arg: expr)*) => {
-        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Debug, format!($fmt_str, $($fmt_arg),*)));
+        crate::LOGGER.log(logf!(crate::log::native::LogLevel::Debug, "{}", format!($fmt_str, $($fmt_arg),*)));
     };
 }
 
 extern crate regex;
 extern crate rustls;
 
-pub mod cli;
-pub mod log;
-pub mod net;
-pub mod srv;
-pub mod syn;
-pub mod web;
-
-pub const APP_NAME: &str = "twebd";
-pub const APP_VERSION: &str = "0.1.0";
-pub const APP_AUTHOR: &str = "Luka Vilfan <luka.vilfan@protonmail.com>";
-pub const APP_DESCRIPTION: &str = "A simple multi-threaded web server written in Rust.";
+pub(crate) mod app;
+pub(crate) mod cli;
+pub(crate) mod log;
+pub(crate) mod net;
+pub(crate) mod srv;
+pub(crate) mod syn;
+pub(crate) mod web;

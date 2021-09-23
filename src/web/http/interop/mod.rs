@@ -1,7 +1,8 @@
 pub mod buffer;
 pub mod parse;
 
-use crate::web::http::{consts, err::HttpParseError};
+use crate::web::http::consts;
+use crate::web::HttpParseError;
 
 pub trait Parse<T, V, E>
 where

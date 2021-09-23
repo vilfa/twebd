@@ -1,9 +1,5 @@
-use crate::web::http::{
-    consts,
-    err::HttpParseError,
-    interop::Parse,
-    native::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpVersion},
-};
+use crate::web::http::consts;
+use crate::web::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpParseError, HttpVersion, Parse};
 use std::{collections::HashMap, path::PathBuf, result::Result};
 
 type E = HttpParseError;

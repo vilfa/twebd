@@ -1,4 +1,4 @@
-use crate::log::{config::Config, display::Color, native::LogLevel};
+use crate::log::{Color, Config, LogLevel};
 use std::{array::IntoIter, collections::HashMap, iter::FromIterator};
 
 impl Default for LogLevel {

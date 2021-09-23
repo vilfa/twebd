@@ -4,7 +4,13 @@ pub mod file;
 pub mod http;
 pub mod https;
 pub mod root;
-pub mod server;
+
+pub use defaults::{default_threads, max_threads};
+pub use err::{ServerError, ServerRootError};
+pub use file::{File, FileReader};
+pub use http::HttpServer;
+pub use https::HttpsServer;
+pub use root::ServerRootBuilder;
 
 use crate::cli;
 
@@ -17,5 +23,5 @@ where
 {
     fn new(opts: Vec<cli::CliOpt>) -> T;
     fn listen(&self);
-    fn handle(&self, conn: &mut std::net::TcpStream) -> Result<Vec<u8>, E>;
+    // fn handle(&self, conn: &mut std::net::TcpStream) -> Result<Vec<u8>, E>;
 }

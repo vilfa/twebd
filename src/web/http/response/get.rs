@@ -1,9 +1,6 @@
 use crate::{
-    srv::file::FileReader,
-    web::http::{
-        err::HttpResponseError,
-        native::{HttpBody, HttpResponse, HttpStatus},
-    },
+    srv::FileReader,
+    web::{HttpBody, HttpResponse, HttpResponseError, HttpStatus},
 };
 use std::path::PathBuf;
 

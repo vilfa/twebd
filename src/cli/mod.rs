@@ -1,7 +1,10 @@
 pub mod parser;
 pub mod runner;
 
-use crate::{log::native::LogLevel, net::DataProtocol};
+pub use parser::{parse_args, parse_matches};
+pub use runner::run;
+
+use crate::{log::LogLevel, net::DataProtocol};
 use std::{net::IpAddr, path::PathBuf};
 
 #[derive(Debug, Clone)]

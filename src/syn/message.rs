@@ -1,6 +1,6 @@
 use crate::{
-    log::{config::LoggerConfigureMessage, native::LogRecord},
-    syn::worker::Job,
+    log::{LogRecord, LoggerConfigureMessage},
+    syn::Job,
 };
 
 pub enum Message {

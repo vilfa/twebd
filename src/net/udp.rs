@@ -1,4 +1,4 @@
-use crate::net::err::SocketError;
+use crate::net::SocketError;
 use std::{
     net::{IpAddr, SocketAddr},
     result::Result,

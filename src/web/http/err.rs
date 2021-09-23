@@ -1,4 +1,4 @@
-use crate::web::http::native::HttpBody;
+use crate::web::HttpBody;
 
 #[derive(Debug)]
 pub enum HttpResponseError {

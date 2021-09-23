@@ -1,4 +1,4 @@
-use crate::log::native::{LogLevel, LogRecord};
+use crate::log::{LogLevel, LogRecord};
 use std::fmt::{Display, Formatter, Result};
 
 pub enum Color {

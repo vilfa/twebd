@@ -1,17 +1,13 @@
-use crate::web::http::{
-    consts,
-    err::HttpParseError,
-    interop,
-    interop::{Parse, TokenIter},
-    native::{HttpBody, HttpHeader, HttpLine, HttpRequest},
-    HandleRequest, HttpHandler,
+use crate::web::{
+    buffer_to_string, consts, string_into_tokens, HandleRequest, HttpBody, HttpHandler, HttpHeader,
+    HttpLine, HttpParseError, HttpRequest, Parse, TokenIter,
 };
 use std::result::Result;
 
 impl HandleRequest<HttpRequest, HttpParseError> for HttpHandler<HttpRequest> {
-    fn handle(buf: &'static mut [u8]) -> Result<HttpRequest, HttpParseError> {
-        let sbuf = interop::buffer_to_string(buf)?;
-        let mut tokens = interop::string_into_tokens(&sbuf);
+    fn handle(buf: &mut [u8]) -> Result<HttpRequest, HttpParseError> {
+        let sbuf = buffer_to_string(buf)?;
+        let mut tokens = string_into_tokens(&sbuf);
         let request_line = parse_request_line(&mut tokens)?;
         let header = parse_header(&mut tokens)?;
         let body = parse_body(&mut tokens)?;

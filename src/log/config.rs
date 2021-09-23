@@ -1,4 +1,4 @@
-use crate::log::{display::Color, native::LogLevel, Logger};
+use crate::log::{Color, LogLevel, Logger};
 use std::collections::HashMap;
 
 pub struct Config {

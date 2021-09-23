@@ -1,24 +1,25 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::native::LogRecord,
-    net::socket::{Socket, SocketBuilder},
-    srv::{err::ServerError, root::ServerRootBuilder, Server},
-    syn::thread::{ThreadPool, ThreadPoolBuilder},
+    log::LogRecord,
+    net::{Socket, SocketBuilder, TcpSocketIo},
+    srv::{Server, ServerError, ServerRootBuilder},
+    syn::{ThreadPool, ThreadPoolBuilder},
     web::{
-        http::{
-            native::{HttpRequest, HttpResponse},
-            HandleRequest, HandleResponse, HttpHandler,
-        },
-        https::tls::{TlsConfig, TlsConfigBuilder},
+        HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse, TlsConfig,
+        TlsConfigBuilder, ToBuf,
     },
 };
-use std::{net::TcpStream, path::PathBuf};
+use rustls::Session;
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 pub struct HttpsServer {
     socket: Socket,
     threads: ThreadPool,
     root: std::sync::Arc<PathBuf>,
-    tls_config: std::sync::Arc<TlsConfig>,
+    tls_config: TlsConfig,
     _backlog: Vec<LogRecord>,
 }
 
@@ -38,20 +39,48 @@ impl Server<Self, ServerError> for HttpsServer {
             socket,
             threads,
             root: std::sync::Arc::new(root),
-            tls_config: std::sync::Arc::new(tls_config),
+            tls_config,
             _backlog: Vec::new(),
         }
     }
     fn listen(&self) {
-        match self.socket {
-            Socket::Tcp(socket) => {}
+        match &self.socket {
+            Socket::Tcp(socket) => {
+                for stream in socket.read() {
+                    let config = std::sync::Arc::new(self.tls_config.server_config.clone());
+                    let mut session = rustls::ServerSession::new(&config);
+                    let root = self.root.clone();
+                    self.threads.execute(move || {
+                        let mut stream = stream.unwrap();
+                        let _ = session.read_tls(&mut stream).unwrap();
+                        let _ = session.process_new_packets();
+                        match handle(&mut session, root) {
+                            Ok(buf) => {
+                                let _ = session.write(&buf);
+                                let _ = session.write_tls(&mut stream);
+                            }
+                            Err(e) => {}
+                        }
+                    })
+                }
+            }
             Socket::Udp(socket) => {}
         }
     }
-    fn handle(&self, conn: &mut TcpStream) -> Result<Vec<u8>, ServerError> {}
 }
 
-fn request(buf: &'static mut [u8]) -> Result<HttpRequest, ServerError> {
+fn handle(
+    session: &mut rustls::ServerSession,
+    root: std::sync::Arc<PathBuf>,
+) -> Result<Vec<u8>, ServerError> {
+    let mut buf = Vec::new();
+    session.read_to_end(&mut buf);
+    let req = request(&mut buf)?;
+    let resp = response(&req, &root);
+    Ok(resp.to_buf())
+}
+
+fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }
 

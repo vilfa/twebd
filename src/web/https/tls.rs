@@ -1,7 +1,7 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    log::{native::LogRecord, Backlog},
-    web::https::err::TlsConfigError,
+    log::{Backlog, LogRecord},
+    web::TlsConfigError,
 };
 use rustls::internal::pemfile;
 use std::{path::PathBuf, result::Result};
@@ -15,7 +15,7 @@ pub struct TlsConfigBuilder {
 }
 
 pub struct TlsConfig {
-    pub server_config: rustls::ServerConfig,
+    pub server_config: std::sync::Arc<rustls::ServerConfig>,
 }
 
 impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
@@ -36,7 +36,9 @@ impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
         let priv_key = load_priv_key(&self.priv_key_path)?;
         let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
         server_config.set_single_cert(cert_chain, priv_key)?;
-        Ok(TlsConfig { server_config })
+        Ok(TlsConfig {
+            server_config: std::sync::Arc::new(server_config),
+        })
     }
 }
 

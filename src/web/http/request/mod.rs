@@ -2,15 +2,18 @@ use crate::web::{
     buffer_to_string, consts, string_into_tokens, HandleRequest, HttpBody, HttpHandler, HttpHeader,
     HttpLine, HttpParseError, HttpRequest, Parse, TokenIter,
 };
+use log::trace;
 use std::result::Result;
 
 impl HandleRequest<HttpRequest, HttpParseError> for HttpHandler<HttpRequest> {
     fn handle(buf: &mut [u8]) -> Result<HttpRequest, HttpParseError> {
+        trace!("called handle request");
         let sbuf = buffer_to_string(buf)?;
         let mut tokens = string_into_tokens(&sbuf);
         let request_line = parse_request_line(&mut tokens)?;
         let header = parse_header(&mut tokens)?;
         let body = parse_body(&mut tokens)?;
+        trace!("finished parsing request");
         Ok(HttpRequest {
             method: request_line.method,
             uri: request_line.uri,

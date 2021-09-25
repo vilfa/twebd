@@ -2,8 +2,10 @@ use crate::{
     cli::{Build, CliOpt, Other},
     srv::ServerRootError,
 };
+use log::trace;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct ServerRootBuilder {
     root: PathBuf,
     _other: Vec<CliOpt>,
@@ -18,6 +20,11 @@ impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
                 cli_opt => server_root_builder.add_other(cli_opt.to_owned()),
             }
         }
+
+        trace!(
+            "constructed server root builder: `{:?}`",
+            &server_root_builder
+        );
         server_root_builder
     }
     fn build(&self) -> Result<PathBuf, ServerRootError> {

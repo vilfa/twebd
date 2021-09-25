@@ -2,6 +2,7 @@ use crate::{
     cli::{Build, CliOpt, Other},
     net::{DataProtocol, SocketError, TcpSocket, UdpSocket},
 };
+use log::trace;
 use std::net::{IpAddr, Ipv4Addr};
 
 #[derive(Debug)]
@@ -10,6 +11,7 @@ pub enum Socket {
     Udp(UdpSocket),
 }
 
+#[derive(Debug)]
 pub struct SocketBuilder {
     address: IpAddr,
     port: u16,
@@ -29,6 +31,8 @@ impl Build<Self, Socket, SocketError> for SocketBuilder {
             }
         }
 
+        trace!("constructed socket builder: `{:?}`", &socket_builder);
+
         socket_builder
     }
     fn build(&self) -> Result<Socket, SocketError> {
@@ -47,8 +51,6 @@ impl Other for SocketBuilder {
         self._other.to_vec()
     }
 }
-
-impl SocketBuilder {}
 
 impl Default for SocketBuilder {
     fn default() -> Self {

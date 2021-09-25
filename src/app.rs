@@ -11,7 +11,7 @@ impl log::Log for Logger {
             match record.level() {
                 log::Level::Error => {
                     eprintln!(
-                        "{}#{}#{}",
+                        "{} # {} # {}",
                         chrono::Local::now().to_rfc3339(),
                         record.level(),
                         record.args()
@@ -19,7 +19,7 @@ impl log::Log for Logger {
                 }
                 _ => {
                     println!(
-                        "{}#{}#{}",
+                        "{} # {} # {}",
                         chrono::Local::now().to_rfc3339(),
                         record.level(),
                         record.args()

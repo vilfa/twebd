@@ -8,7 +8,7 @@ use crate::{
         TlsConfigBuilder, ToBuf,
     },
 };
-use log::error;
+use log::{error, info};
 use rustls::Session;
 use std::{
     io::{Read, Write},
@@ -24,6 +24,8 @@ pub struct HttpsServer {
 
 impl Server<Self, ServerError> for HttpsServer {
     fn new(opts: Vec<CliOpt>) -> Self {
+        info!("initializing https server with options: `{:?}`", &opts);
+
         let socket_builder = SocketBuilder::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
         let server_root_builder = ServerRootBuilder::new(thread_pool_builder.other());
@@ -42,6 +44,10 @@ impl Server<Self, ServerError> for HttpsServer {
         }
     }
     fn listen(&self) {
+        info!(
+            "listening for https connections on socket: `{:?}`",
+            &self.socket
+        );
         match &self.socket {
             Socket::Tcp(socket) => {
                 for stream in socket.read() {
@@ -64,7 +70,7 @@ impl Server<Self, ServerError> for HttpsServer {
                     })
                 }
             }
-            Socket::Udp(socket) => {}
+            _ => {}
         }
     }
 }

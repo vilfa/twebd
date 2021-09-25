@@ -2,9 +2,11 @@ use crate::{
     cli::{Build, CliOpt, Other},
     web::TlsConfigError,
 };
+use log::trace;
 use rustls::internal::pemfile;
 use std::{path::PathBuf, result::Result};
 
+#[derive(Debug)]
 pub struct TlsConfigBuilder {
     https_enabled: bool,
     cert_path: PathBuf,
@@ -27,6 +29,8 @@ impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
                 cli_opt => tls_config_builder.add_other(cli_opt.to_owned()),
             }
         }
+
+        trace!("constructed tls config builder: `{:?}", &tls_config_builder);
         tls_config_builder
     }
     fn build(&self) -> Result<TlsConfig, TlsConfigError> {
@@ -34,6 +38,7 @@ impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
         let priv_key = load_priv_key(&self.priv_key_path)?;
         let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
         server_config.set_single_cert(cert_chain, priv_key)?;
+        trace!("constructed server tls config");
         Ok(TlsConfig {
             server_config: std::sync::Arc::new(server_config),
         })
@@ -61,6 +66,7 @@ impl Default for TlsConfigBuilder {
 }
 
 fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
+    trace!("loading private key");
     let handle = std::fs::File::open(path)?;
     let mut buf_reader = std::io::BufReader::new(handle);
     match pemfile::pkcs8_private_keys(&mut buf_reader).map_err(|e| {
@@ -84,6 +90,7 @@ fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
 }
 
 fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError> {
+    trace!("loading certificate");
     let handle = std::fs::File::open(path)?;
     let mut buf_reader = std::io::BufReader::new(handle);
 

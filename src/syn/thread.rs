@@ -2,7 +2,7 @@ use crate::{
     cli::{defaults, Build, CliOpt, Other},
     syn::{Message, ThreadPoolError, Tx, Worker},
 };
-use log::debug;
+use log::{debug, trace};
 use std::sync::{mpsc, Arc, Mutex};
 
 pub struct ThreadPool {
@@ -27,6 +27,7 @@ impl ThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
+        debug!("sending execute message to thread pool");
         let job = Box::new(f);
         self.sender.send(Message::Job(job)).unwrap();
     }
@@ -52,6 +53,7 @@ impl Drop for ThreadPool {
     }
 }
 
+#[derive(Debug)]
 pub struct ThreadPoolBuilder {
     pool_size: usize,
     _other: Vec<CliOpt>,
@@ -66,6 +68,11 @@ impl Build<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
                 cli_opt => thread_pool_builder.add_other(cli_opt.to_owned()),
             }
         }
+
+        trace!(
+            "constructed thread pool builder: `{:?}`",
+            &thread_pool_builder
+        );
         thread_pool_builder
     }
     fn build(&self) -> Result<ThreadPool, ThreadPoolError> {

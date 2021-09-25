@@ -50,17 +50,17 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .max_values(1)
                 .help("Sets the server port number [possible values: 1..65535]"),
         )
-        .arg(
-            Arg::with_name("protocol")
-                .short("d")
-                .long("protocol")
-                .required(false)
-                .takes_value(true)
-                .possible_values(&["tcp", "udp"])
-                .value_name("PROTOCOL")
-                .max_values(1)
-                .help("Sets the server data layer protocol"),
-        )
+        // .arg(
+        //     Arg::with_name("protocol")
+        //         .short("d")
+        //         .long("protocol")
+        //         .required(false)
+        //         .takes_value(true)
+        //         .possible_values(&["tcp", "udp"])
+        //         .value_name("PROTOCOL")
+        //         .max_values(1)
+        //         .help("Sets the server data layer protocol"),
+        // )
         .arg(
             Arg::with_name("directory")
                 .short("f")
@@ -184,28 +184,32 @@ fn port(matches: &clap::ArgMatches) -> CliOpt {
     }
 }
 
-fn protocol(matches: &clap::ArgMatches) -> CliOpt {
-    if let Some(v) = matches.value_of("protocol") {
-        match &v[..] {
-            "tcp" => CliOpt::Protocol(DataProtocol::Tcp),
-            "udp" => CliOpt::Protocol(DataProtocol::Udp),
-            e => {
-                error!(
-                    "unknown data protocol: `{}`, using default: `{:?}`",
-                    e,
-                    defaults::protocol()
-                );
-                CliOpt::Protocol(defaults::protocol())
-            }
-        }
-    } else {
-        warn!(
-            "data protocol not specified, using default: `{:?}`",
-            defaults::protocol()
-        );
-        CliOpt::Protocol(defaults::protocol())
-    }
+fn protocol(_matches: &clap::ArgMatches) -> CliOpt {
+    CliOpt::Protocol(DataProtocol::Tcp)
 }
+
+// fn protocol(matches: &clap::ArgMatches) -> CliOpt {
+//     if let Some(v) = matches.value_of("protocol") {
+//         match &v[..] {
+//             "tcp" => CliOpt::Protocol(DataProtocol::Tcp),
+//             "udp" => CliOpt::Protocol(DataProtocol::Udp),
+//             e => {
+//                 error!(
+//                     "unknown data protocol: `{}`, using default: `{:?}`",
+//                     e,
+//                     defaults::protocol()
+//                 );
+//                 CliOpt::Protocol(defaults::protocol())
+//             }
+//         }
+//     } else {
+//         warn!(
+//             "data protocol not specified, using default: `{:?}`",
+//             defaults::protocol()
+//         );
+//         CliOpt::Protocol(defaults::protocol())
+//     }
+// }
 
 fn directory(matches: &clap::ArgMatches) -> CliOpt {
     if let Some(v) = matches.value_of("directory") {

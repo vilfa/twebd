@@ -12,14 +12,11 @@ pub use root::ServerRootBuilder;
 
 use crate::cli;
 
-// pub trait Server<T, V, E>
 pub trait Server<T, E>
 where
     T: Sized,
-    // V: Sized + interop::ToBuf,
     E: Sized,
 {
     fn new(opts: Vec<cli::CliOpt>) -> T;
     fn listen(&self);
-    // fn handle(&self, conn: &mut std::net::TcpStream) -> Result<Vec<u8>, E>;
 }

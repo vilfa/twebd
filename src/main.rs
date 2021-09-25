@@ -8,9 +8,10 @@
 // DONE - generate self-signed certificates for tls testing;
 // - implement https module;
 // - implement https module error handling;
-// - make socket operations actually multithreaded;
-// - restructure and make logger better;
-// - look into once for logger;
+// DONE - make socket operations actually multithreaded;
+// DONE - restructure and make logger better;
+// DONE - look into once for logger;
+// DONE - get rid of udp
 
 fn main() {
     twebd::run();

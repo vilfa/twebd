@@ -18,8 +18,8 @@ impl HandleRequest<HttpRequest, HttpParseError> for HttpHandler<HttpRequest> {
             method: request_line.method,
             uri: request_line.uri,
             version: request_line.version,
-            header: header,
-            body: body,
+            header,
+            body,
         })
     }
 }

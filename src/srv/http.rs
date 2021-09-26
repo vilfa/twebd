@@ -24,7 +24,7 @@ pub struct HttpServer {
 
 impl Server<Self, ServerError> for HttpServer {
     fn new(opts: Vec<CliOpt>) -> Self {
-        info!("intializing http server with options: `{:?}`", &opts);
+        info!("initializing http server with options: `{:?}`", &opts);
 
         let socket_builder = SocketBuilder::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
@@ -35,7 +35,7 @@ impl Server<Self, ServerError> for HttpServer {
         let root = server_root_builder.build().unwrap();
 
         HttpServer {
-            socket: socket,
+            socket,
             threads,
             root: Arc::new(root),
         }
@@ -49,7 +49,7 @@ impl Server<Self, ServerError> for HttpServer {
             let mut stream = stream.unwrap();
             let root = self.root.clone();
             self.threads.execute(move || {
-                info!("recieved tcp connection");
+                info!("received tcp connection");
                 match handle(&mut stream, root) {
                     Ok(buf) => {
                         let _ = stream.write(&buf);
@@ -64,7 +64,7 @@ impl Server<Self, ServerError> for HttpServer {
 }
 
 fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    trace!("recieved server session: `{:?}`", &stream);
+    trace!("received server session: `{:?}`", &stream);
     let mut buf = match BufReader::new(stream).fill_buf() {
         Ok(v) => {
             debug!("read data from session: {} bytes", v.len());
@@ -81,7 +81,7 @@ fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerE
 }
 
 fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-    trace!("recieved buffer: `{:?}`", &buf);
+    trace!("received buffer: `{:?}`", &buf);
     trace!("buffer as string: `{:?}`", buffer_to_string(&buf)?);
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }

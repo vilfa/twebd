@@ -3,7 +3,7 @@ pub enum TlsConfigError {
     CertificateError(String),
     PrivateKeyError(String),
     FileReaderError(String),
-    TlsError(rustls::TLSError),
+    TlsError(rustls::Error),
 }
 
 impl From<std::io::Error> for TlsConfigError {
@@ -12,8 +12,8 @@ impl From<std::io::Error> for TlsConfigError {
     }
 }
 
-impl From<rustls::TLSError> for TlsConfigError {
-    fn from(e: rustls::TLSError) -> Self {
+impl From<rustls::Error> for TlsConfigError {
+    fn from(e: rustls::Error) -> Self {
         TlsConfigError::TlsError(e)
     }
 }

@@ -116,7 +116,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
         .get_matches()
 }
 
-pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<CliConfig> {
+pub fn parse_matches(matches: &clap::ArgMatches) -> Result<CliConfig> {
     let cli_opts = vec![
         address(matches),
         port(matches),

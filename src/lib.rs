@@ -6,10 +6,10 @@ fn init_logger(log_level: log::LevelFilter) -> Result<(), log::SetLoggerError> {
 extern crate log;
 extern crate regex;
 extern crate rustls;
+extern crate rustls_pemfile;
 
 pub mod app;
 pub mod cli;
-// pub mod log;
 pub mod net;
 pub mod srv;
 pub mod syn;

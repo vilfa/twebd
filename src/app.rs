@@ -6,6 +6,9 @@ pub const APP_DESCRIPTION: &str = "A simple multi-threaded web server written in
 pub struct Logger;
 
 impl log::Log for Logger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Trace
+    }
     fn log(&self, record: &log::Record<'_>) {
         if self.enabled(record.metadata()) {
             match record.level() {
@@ -27,9 +30,6 @@ impl log::Log for Logger {
                 }
             }
         }
-    }
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= log::Level::Trace
     }
     fn flush(&self) {}
 }

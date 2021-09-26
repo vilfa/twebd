@@ -5,11 +5,10 @@ use crate::{
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
         buffer_to_string, HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse,
-        TlsConfig, TlsConfigBuilder, ToBuf,
+        TlsConfigBuilder, ToBuf,
     },
 };
 use log::{debug, error, info, trace};
-use rustls::Session;
 use std::{
     io::{BufRead, BufReader, Write},
     path::PathBuf,
@@ -20,7 +19,7 @@ pub struct HttpsServer {
     socket: TcpSocket,
     threads: ThreadPool,
     root: Arc<PathBuf>,
-    tls_config: TlsConfig,
+    tls_config: Arc<rustls::ServerConfig>,
 }
 
 impl Server<Self, ServerError> for HttpsServer {
@@ -41,7 +40,7 @@ impl Server<Self, ServerError> for HttpsServer {
             socket,
             threads,
             root: Arc::new(root),
-            tls_config,
+            tls_config: Arc::new(tls_config),
         }
     }
     fn listen(&self) {
@@ -52,24 +51,24 @@ impl Server<Self, ServerError> for HttpsServer {
         for stream in self.socket.incoming() {
             let mut stream = stream.unwrap();
             let root = self.root.clone();
-            let config = Arc::new(self.tls_config.server_config.clone());
-            let mut session = rustls::ServerSession::new(&config);
+            let config = self.tls_config.clone();
+            let mut conn = rustls::ServerConnection::new(config).unwrap();
             self.threads.execute(move || {
-                match session.read_tls(&mut stream) {
+                match conn.read_tls(&mut stream) {
                     Ok(size) => debug!("read tls data from session: {} bytes", size),
                     Err(e) => error!("error reading tls data from session: `{:?}`", e),
                 }
-                match session.process_new_packets() {
+                match conn.process_new_packets() {
                     Ok(_) => debug!("successfully processed new tls packets"),
                     Err(e) => error!("error processing new tls packets: `{:?}`", e),
                 }
-                match handle(&mut session, root) {
+                match handle(&mut conn, root) {
                     Ok(buf) => {
-                        match session.write(&buf) {
+                        match conn.writer().write(&buf) {
                             Ok(size) => debug!("write data to session: {} bytes", size),
                             Err(e) => error!("error writing data to session: `{:?}`", e),
                         }
-                        match session.write_tls(&mut stream) {
+                        match conn.write_tls(&mut stream) {
                             Ok(size) => debug!("write tls data to session: {} bytes", size),
                             Err(e) => {
                                 error!("error writing tls data to session: `{:?}`", e)
@@ -85,9 +84,9 @@ impl Server<Self, ServerError> for HttpsServer {
     }
 }
 
-fn handle(session: &mut rustls::ServerSession, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    debug!("recieved tls server session: `{:?}`", &session);
-    let mut buf = match BufReader::new(session).fill_buf() {
+fn handle(conn: &mut rustls::ServerConnection, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
+    debug!("recieved tls server session: `{:?}`", &conn);
+    let mut buf = match BufReader::new(conn.reader()).fill_buf() {
         Ok(v) => {
             debug!("read data from session: {} bytes", v.len());
             v.to_vec()

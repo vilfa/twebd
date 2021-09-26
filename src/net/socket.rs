@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    net::{DataProtocol, SocketError, TcpSocket, UdpSocket},
+    net::{SocketError, TcpSocket, UdpSocket},
 };
 use log::trace;
 use std::net::{IpAddr, Ipv4Addr};
@@ -15,18 +15,16 @@ pub enum Socket {
 pub struct SocketBuilder {
     address: IpAddr,
     port: u16,
-    protocol: DataProtocol,
     _other: Vec<CliOpt>,
 }
 
-impl Build<Self, Socket, SocketError> for SocketBuilder {
+impl Build<Self, TcpSocket, SocketError> for SocketBuilder {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut socket_builder = Self::default();
         for opt in opts {
             match opt {
                 CliOpt::Address(v) => socket_builder.address = v,
                 CliOpt::Port(v) => socket_builder.port = v,
-                CliOpt::Protocol(v) => socket_builder.protocol = v,
                 cli_opt => socket_builder.add_other(cli_opt.to_owned()),
             }
         }
@@ -35,11 +33,8 @@ impl Build<Self, Socket, SocketError> for SocketBuilder {
 
         socket_builder
     }
-    fn build(&self) -> Result<Socket, SocketError> {
-        match self.protocol {
-            DataProtocol::Tcp => Ok(Socket::Tcp(TcpSocket::new(self.address, self.port))),
-            DataProtocol::Udp => Ok(Socket::Udp(UdpSocket::new(self.address, self.port))),
-        }
+    fn build(&self) -> Result<TcpSocket, SocketError> {
+        Ok(TcpSocket::new(self.address, self.port))
     }
 }
 
@@ -57,7 +52,6 @@ impl Default for SocketBuilder {
         SocketBuilder {
             address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             port: 8080,
-            protocol: DataProtocol::Tcp,
             _other: Vec::new(),
         }
     }

@@ -1,14 +1,4 @@
-use crate::net::SocketError;
-use std::{
-    io::Write,
-    net::{Incoming, IpAddr, SocketAddr, TcpListener, TcpStream},
-    result::Result,
-};
-
-pub trait TcpSocketIo {
-    fn read(&self) -> Incoming<'_>;
-    fn write(&self, stream: &mut TcpStream, buf: &[u8]) -> Result<usize, SocketError>;
-}
+use std::net::{Incoming, IpAddr, SocketAddr, TcpListener};
 
 #[derive(Debug)]
 pub struct TcpSocket {
@@ -22,15 +12,7 @@ impl TcpSocket {
 
         TcpSocket { socket }
     }
-}
-
-impl TcpSocketIo for TcpSocket {
-    fn read(&self) -> Incoming<'_> {
+    pub fn incoming(&self) -> Incoming<'_> {
         self.socket.incoming()
-    }
-    fn write(&self, stream: &mut TcpStream, buf: &[u8]) -> Result<usize, SocketError> {
-        stream
-            .write(buf)
-            .or_else(|e| Err(SocketError::SocketIoError(e)))
     }
 }

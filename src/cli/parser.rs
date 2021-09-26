@@ -1,7 +1,6 @@
 use crate::{
     app::{APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION},
     cli::{defaults, CliOpt},
-    net::DataProtocol,
 };
 use clap::{App, Arg};
 use log::{error, warn};
@@ -121,7 +120,6 @@ pub fn parse_matches<'a>(matches: &clap::ArgMatches<'a>) -> Result<CliConfig> {
     let cli_opts = vec![
         address(matches),
         port(matches),
-        protocol(matches),
         directory(matches),
         threads(matches),
         https_cert(matches),
@@ -182,10 +180,6 @@ fn port(matches: &clap::ArgMatches) -> CliOpt {
         warn!("port not specified, using default: `{}`", defaults::port());
         CliOpt::Port(defaults::port())
     }
-}
-
-fn protocol(_matches: &clap::ArgMatches) -> CliOpt {
-    CliOpt::Protocol(DataProtocol::Tcp)
 }
 
 // fn protocol(matches: &clap::ArgMatches) -> CliOpt {

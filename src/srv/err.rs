@@ -12,6 +12,7 @@ pub enum ServerError {
     ResponseError(HttpResponseError),
     SecurityError(TlsConfigError),
     RootPathError(ServerRootError),
+    SessionIoError(std::io::Error),
 }
 
 impl From<std::io::Error> for ServerError {

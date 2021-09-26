@@ -4,7 +4,7 @@ use crate::{
 };
 use log::trace;
 use rustls::internal::pemfile;
-use std::{path::PathBuf, result::Result};
+use std::{path::PathBuf, result::Result, sync::Arc};
 
 #[derive(Debug)]
 pub struct TlsConfigBuilder {
@@ -15,7 +15,7 @@ pub struct TlsConfigBuilder {
 }
 
 pub struct TlsConfig {
-    pub server_config: std::sync::Arc<rustls::ServerConfig>,
+    pub server_config: Arc<rustls::ServerConfig>,
 }
 
 impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
@@ -40,7 +40,7 @@ impl Build<Self, TlsConfig, TlsConfigError> for TlsConfigBuilder {
         server_config.set_single_cert(cert_chain, priv_key)?;
         trace!("constructed server tls config");
         Ok(TlsConfig {
-            server_config: std::sync::Arc::new(server_config),
+            server_config: Arc::new(server_config),
         })
     }
 }

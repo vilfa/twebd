@@ -1,21 +1,25 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    net::{Socket, SocketBuilder, TcpSocketIo},
+    net::{SocketBuilder, TcpSocket},
     srv::{Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
-    web::{HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse, ToBuf},
+    web::{
+        buffer_to_string, HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse,
+        ToBuf,
+    },
 };
 use log::{debug, error, info, trace};
 use std::{
     io::{BufRead, BufReader, Write},
     net::TcpStream,
     path::PathBuf,
+    sync::Arc,
 };
 
 pub struct HttpServer {
-    socket: Socket,
+    socket: TcpSocket,
     threads: ThreadPool,
-    root: std::sync::Arc<PathBuf>,
+    root: Arc<PathBuf>,
 }
 
 impl Server<Self, ServerError> for HttpServer {
@@ -31,9 +35,9 @@ impl Server<Self, ServerError> for HttpServer {
         let root = server_root_builder.build().unwrap();
 
         HttpServer {
-            socket,
+            socket: socket,
             threads,
-            root: std::sync::Arc::new(root),
+            root: Arc::new(root),
         }
     }
     fn listen(&self) {
@@ -41,40 +45,44 @@ impl Server<Self, ServerError> for HttpServer {
             "listening for http connections on socket: `{:?}",
             &self.socket
         );
-        match &self.socket {
-            Socket::Tcp(socket) => {
-                for stream in socket.read() {
-                    let root = self.root.clone();
-                    self.threads.execute(move || {
-                        info!("recieved tcp connection");
-                        let mut stream = stream.unwrap();
-                        match handle(&mut stream, root) {
-                            Ok(buf) => {
-                                let _ = stream.write(&buf);
-                            }
-                            Err(e) => {
-                                error!("error reading tcp stream: `{:?}`", e);
-                            }
-                        }
-                    })
+        for stream in self.socket.incoming() {
+            let mut stream = stream.unwrap();
+            let root = self.root.clone();
+            self.threads.execute(move || {
+                info!("recieved tcp connection");
+                match handle(&mut stream, root) {
+                    Ok(buf) => {
+                        let _ = stream.write(&buf);
+                    }
+                    Err(e) => {
+                        error!("error reading tcp stream: `{:?}`", e);
+                    }
                 }
-            }
-            _ => {}
+            })
         }
     }
 }
 
-fn handle(data: &mut TcpStream, root: std::sync::Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    debug!("recieved tcp stream: `{:?}`", &data);
-    let mut reader = BufReader::new(data);
-    let mut buf = reader.fill_buf()?.to_vec();
-    let req = request(&mut buf)?;
-    let resp = response(&req, &root);
-    Ok(resp.to_buf())
+fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
+    trace!("recieved server session: `{:?}`", &stream);
+    let mut buf = match BufReader::new(stream).fill_buf() {
+        Ok(v) => {
+            debug!("read data from session: {} bytes", v.len());
+            v.to_vec()
+        }
+        Err(e) => {
+            error!("error reading data from session: `{:?}`", e);
+            return Err(ServerError::SessionIoError(e));
+        }
+    };
+    let request = request(&mut buf)?;
+    let response = response(&request, &root);
+    Ok(response.to_buf())
 }
 
 fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
     trace!("recieved buffer: `{:?}`", &buf);
+    trace!("buffer as string: `{:?}`", buffer_to_string(&buf)?);
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }
 

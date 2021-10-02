@@ -10,7 +10,7 @@ use crate::{
 };
 use log::{debug, error, info, trace};
 use std::{
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     sync::Arc,
 };
@@ -86,16 +86,24 @@ impl Server<Self, ServerError> for HttpsServer {
 
 fn handle(conn: &mut rustls::ServerConnection, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
     debug!("recieved tls server session: `{:?}`", &conn);
-    let mut buf = match BufReader::new(conn.reader()).fill_buf() {
-        Ok(v) => {
-            debug!("read data from session: {} bytes", v.len());
-            v.to_vec()
-        }
+    let mut buf = Vec::new();
+    match conn.reader().read_to_end(&mut buf) {
+        Ok(size) => debug!("read data from session: {} bytes", size),
         Err(e) => {
             error!("error reading data from session: `{:?}`", e);
             return Err(ServerError::SessionIoError(e));
         }
-    };
+    }
+    // let mut buf = match BufReader::new(conn.reader()).fill_buf() {
+    //     Ok(v) => {
+    //         debug!("read data from session: {} bytes", v.len());
+    //         v.to_vec()
+    //     }
+    //     Err(e) => {
+    //         error!("error reading data from session: `{:?}`", e);
+    //         return Err(ServerError::SessionIoError(e));
+    //     }
+    // };
     let request = request(&mut buf)?;
     let response = response(&request, &root);
     Ok(response.to_buf())

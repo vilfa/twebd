@@ -13,3 +13,4 @@ mime_guess = "2.0.3"
 rustls = "0.20.0"
 rustls-pemfile = "0.2.1"
 log = "0.4.14"
+mio = { version = "0.7.13", features = ["os-poll","net"] }

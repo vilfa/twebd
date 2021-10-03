@@ -40,7 +40,7 @@ impl Server<Self, ServerError> for HttpServer {
             root: Arc::new(root),
         }
     }
-    fn listen(&self) {
+    fn listen(&mut self) {
         info!(
             "listening for http connections on socket: `{:?}",
             &self.socket

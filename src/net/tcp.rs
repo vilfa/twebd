@@ -1,4 +1,4 @@
-use std::net::{Incoming, IpAddr, SocketAddr, TcpListener};
+use std::net::{Incoming, IpAddr, SocketAddr, TcpListener, TcpStream};
 
 #[derive(Debug)]
 pub struct TcpSocket {
@@ -14,5 +14,14 @@ impl TcpSocket {
     }
     pub fn incoming(&self) -> Incoming<'_> {
         self.socket.incoming()
+    }
+    pub fn accept(&self) -> Result<(TcpStream, SocketAddr), std::io::Error> {
+        self.socket.accept()
+    }
+    pub fn socket(&self) -> &TcpListener {
+        &self.socket
+    }
+    pub fn socket_mut(&mut self) -> &mut TcpListener {
+        &mut self.socket
     }
 }

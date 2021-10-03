@@ -4,6 +4,7 @@ fn init_logger(log_level: log::LevelFilter) -> Result<(), log::SetLoggerError> {
 }
 
 extern crate log;
+extern crate mio;
 extern crate regex;
 extern crate rustls;
 extern crate rustls_pemfile;

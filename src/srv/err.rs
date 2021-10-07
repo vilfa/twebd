@@ -1,6 +1,15 @@
 use crate::web::{HttpParseError, HttpResponseError, TlsConfigError};
 
 #[derive(Debug)]
+pub enum ConnectionError {
+    TlsReadError(std::io::Error),
+    TlsProcessError(rustls::Error),
+    TlsWriteError(std::io::Error),
+    PlainReadError(std::io::Error),
+    PlainWriteError(std::io::Error),
+}
+
+#[derive(Debug)]
 pub enum ServerRootError {
     General,
 }
@@ -13,6 +22,7 @@ pub enum ServerError {
     SecurityError(TlsConfigError),
     RootPathError(ServerRootError),
     SessionIoError(std::io::Error),
+    ConnError(ConnectionError),
 }
 
 impl From<std::io::Error> for ServerError {
@@ -42,5 +52,11 @@ impl From<TlsConfigError> for ServerError {
 impl From<ServerRootError> for ServerError {
     fn from(e: ServerRootError) -> Self {
         Self::RootPathError(e)
+    }
+}
+
+impl From<ConnectionError> for ServerError {
+    fn from(e: ConnectionError) -> Self {
+        Self::ConnError(e)
     }
 }

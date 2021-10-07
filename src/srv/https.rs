@@ -1,7 +1,9 @@
 use crate::{
     cli::{Build, CliOpt, Other},
     net::{SocketBuilder, TcpSocket},
-    srv::{Connection, Server, ServerError, ServerRootBuilder, SERVER_QUEUE_SIZE, SERVER_TOKEN},
+    srv::{
+        Connection, Server, ServerError, ServerRootBuilder, SERVER_QUEUE_SIZE, SERVER_SOCKET_TOKEN,
+    },
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
         buffer_to_string, HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse,
@@ -9,15 +11,10 @@ use crate::{
     },
 };
 use log::{debug, error, info, trace};
-use std::{
-    collections::HashMap,
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-    sync::Arc,
-};
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, sync::Arc};
 
 pub struct HttpsServer {
-    socket: TcpSocket,
+    socket: Arc<TcpSocket>,
     poll: mio::Poll,
     events: mio::Events,
     connections: HashMap<mio::Token, Connection>,
@@ -36,7 +33,7 @@ impl Server<Self, ServerError> for HttpsServer {
         let server_root_builder = ServerRootBuilder::new(thread_pool_builder.other());
         let tls_config_builder = TlsConfigBuilder::new(server_root_builder.other());
 
-        let socket = socket_builder.build().unwrap();
+        let mut socket = socket_builder.build().unwrap();
         let threads = thread_pool_builder.build().unwrap();
         let root = server_root_builder.build().unwrap();
         let tls_config = tls_config_builder.build().unwrap();
@@ -49,13 +46,27 @@ impl Server<Self, ServerError> for HttpsServer {
             }
         };
 
-        poll.registry()
-            .register(socket.socket_mut(), SERVER_TOKEN, mio::Interest::READABLE);
+        match poll
+            .registry()
+            .register(&mut socket, SERVER_SOCKET_TOKEN, mio::Interest::READABLE)
+        {
+            Ok(_) => debug!(
+                "registered readable interest for server socket: `{:?}`",
+                &socket
+            ),
+            Err(e) => {
+                error!(
+                    "error registering readable interest for server socket: `{:?}`: `{:?}`",
+                    &socket, e
+                );
+                panic!();
+            }
+        }
 
         let events = mio::Events::with_capacity(SERVER_QUEUE_SIZE);
 
         HttpsServer {
-            socket,
+            socket: Arc::new(socket),
             poll,
             events,
             connections: HashMap::new(),
@@ -74,13 +85,24 @@ impl Server<Self, ServerError> for HttpsServer {
         loop {
             match self.poll.poll(&mut self.events, None) {
                 Ok(_) => {
-                    for event in self.events.iter() {
-                        match event.token() {
-                            SERVER_TOKEN => match self.accept(self.poll.registry()) {
-                                Ok(_) => {}
+                    for evt in self.events.iter() {
+                        match evt.token() {
+                            SERVER_SOCKET_TOKEN => match accept(
+                                &self.socket,
+                                &self.poll.registry(),
+                                &mut self.connections,
+                                self.tls_config.clone(),
+                                self.next_conn_id,
+                            ) {
+                                Ok(_) => {
+                                    self.next_conn_id += 1;
+                                }
                                 Err(e) => error!("error accepting connection: {:?}", e),
                             },
-                            _ => self.event(self.poll.registry(), event),
+                            _ => match event(&evt, &mut self.connections, &self.poll, &self.root) {
+                                Err(e) => error!("error handling request: `{:?}`", e),
+                                _ => {}
+                            },
                         }
                     }
                 }
@@ -90,82 +112,93 @@ impl Server<Self, ServerError> for HttpsServer {
             }
         }
     }
-    fn accept(&self, registry: &mio::Registry) -> Result<(), ServerError> {
-        loop {
-            match self.socket.accept() {
-                Ok((sock, addr)) => {
-                    debug!(
-                        "accepting new connection on socket: from: `{:?}` `{:?}`",
-                        &sock, &addr
-                    );
+}
 
-                    let tls_conn = rustls::ServerConnection::new(self.tls_config.clone()).unwrap();
-                    let token = mio::Token(self.next_conn_id);
-                    self.next_conn_id += 1;
+fn accept(
+    socket: &TcpSocket,
+    registry: &mio::Registry,
+    connections: &mut HashMap<mio::Token, Connection>,
+    tls_config: Arc<rustls::ServerConfig>,
+    next_conn_id: usize,
+) -> Result<(), ServerError> {
+    loop {
+        match socket.accept() {
+            Ok((sock, addr)) => {
+                debug!(
+                    "accepting new connection on socket: from: `{:?}` `{:?}`",
+                    &sock, &addr
+                );
 
-                    let mut conn = Connection::new(sock, token, tls_conn);
-                    conn.register(registry);
-                    self.connections.insert(token, conn);
-                }
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
-                Err(e) => {
-                    error!("error accepting connection: `{:?}`", e);
-                    return Err(ServerError::SessionIoError(e));
-                }
+                let tls_conn = rustls::ServerConnection::new(tls_config.clone()).unwrap();
+                let token = mio::Token(next_conn_id);
+                let mut conn = Connection::new(sock, token, tls_conn);
+                conn.register(registry);
+                connections.insert(token, conn);
             }
-        }
-    }
-    fn event(&self, registry: &mio::Registry, event: &mio::event::Event) {
-        let token = event.token();
-        if self.connections.contains_key(&token) {
-            // self.connections
-            //     .get_mut(&token)
-            //     .unwrap()
-            //     .ready(registry, event);
-            self.handle(event, self.connections.get_mut(&token).unwrap());
-
-            if self.connections[&token].is_closed() {
-                self.connections.remove(&token);
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
+            Err(e) => {
+                error!("error accepting connection: `{:?}`", e);
+                return Err(ServerError::SessionIoError(e));
             }
-        }
-    }
-    fn handle(&self, event: &mio::event::Event, conn: &mut Connection) {
-        if event.is_readable() {}
-
-        if event.is_writable() {}
-
-        if conn.is_closing() {
-            conn.shutdown(std::net::Shutdown::Both, self.poll.registry());
-        } else {
-            conn.reregister(self.poll.registry());
         }
     }
 }
 
-fn handle(conn: &mut rustls::ServerConnection, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    debug!("recieved tls server session: `{:?}`", &conn);
-    let mut buf = match BufReader::new(conn.reader()).fill_buf() {
-        Ok(v) => {
-            debug!("read data from session: {} bytes", v.len());
-            v.to_vec()
+fn event(
+    event: &mio::event::Event,
+    connections: &mut HashMap<mio::Token, Connection>,
+    poll: &mio::Poll,
+    root: &PathBuf,
+) -> Result<(), ServerError> {
+    let token = event.token();
+    if connections.contains_key(&token) {
+        handle(event, connections.get_mut(&token).unwrap(), poll, root)?;
+
+        if connections[&token].is_closed() {
+            connections.remove(&token);
         }
-        Err(e) => {
-            error!("error reading data from session: `{:?}`", e);
-            return Err(ServerError::SessionIoError(e));
+    }
+    Ok(())
+}
+
+fn handle(
+    event: &mio::event::Event,
+    conn: &mut Connection,
+    poll: &mio::Poll,
+    root: &PathBuf,
+) -> Result<(), ServerError> {
+    if event.is_readable() {
+        conn.read_tls()?;
+        if let Ok(io_state) = conn.process_tls() {
+            if io_state.plaintext_bytes_to_read() > 0 {
+                let mut buf = conn.read_plain(io_state.plaintext_bytes_to_read())?;
+                let request = request(&mut buf)?;
+                let response = response(&request, root);
+                conn.write_plain(response.to_buf())?;
+            }
         }
-    };
-    let request = request(&mut buf)?;
-    let response = response(&request, &root);
-    Ok(response.to_buf())
+    }
+
+    if event.is_writable() {
+        conn.write_tls()?;
+    }
+
+    if conn.is_closing() {
+        conn.shutdown(std::net::Shutdown::Both, poll.registry());
+    } else {
+        conn.reregister(poll.registry());
+    }
+
+    Ok(())
 }
 
 fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-    trace!("received buffer: `{:?}`", &buf);
-    trace!("buffer as string: `{:?}`", buffer_to_string(&buf)?);
+    trace!("received buffer: `{:?}`", buf);
+    trace!("buffer as string: `{:?}`", buffer_to_string(buf)?);
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }
 
 fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-    trace!("parsed request: `{:?}`", &req);
+    trace!("parsed request: `{:?}`", req);
     HttpHandler::<HttpResponse>::handle(req, root)
 }

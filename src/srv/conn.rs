@@ -90,7 +90,7 @@ impl Connection {
         }
     }
     pub fn read_plain(&mut self, size: usize) -> Result<Vec<u8>, ConnectionError> {
-        let mut buf: Vec<u8> = Vec::with_capacity(size);
+        let mut buf: Vec<u8> = vec![0; size];
         match self.tls_conn.reader().read(&mut buf) {
             Ok(size) => {
                 debug!("read plaintext from session: {} bytes", size);

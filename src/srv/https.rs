@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use log::{debug, error, info, trace};
-use std::{cell::RefCell, collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 pub struct HttpsServer {
     socket: Arc<TcpSocket>,

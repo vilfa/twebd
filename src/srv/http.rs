@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    net::{SocketBuilder, TcpSocket},
+    net::{SimpleTcpSocket, SocketBuilder},
     srv::{Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
@@ -11,12 +11,13 @@ use crate::{
 use log::{debug, error, info, trace};
 use std::{
     io::{BufRead, BufReader, Write},
+    net::TcpStream,
     path::PathBuf,
     sync::Arc,
 };
 
 pub struct HttpServer {
-    socket: TcpSocket,
+    socket: SimpleTcpSocket,
     threads: ThreadPool,
     root: Arc<PathBuf>,
 }
@@ -25,7 +26,7 @@ impl Server<Self, ServerError> for HttpServer {
     fn new(opts: Vec<CliOpt>) -> Self {
         info!("initializing http server with options: `{:?}`", &opts);
 
-        let socket_builder = SocketBuilder::new(opts);
+        let socket_builder = SocketBuilder::<SimpleTcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
         let server_root_builder = ServerRootBuilder::new(thread_pool_builder.other());
 
@@ -44,31 +45,25 @@ impl Server<Self, ServerError> for HttpServer {
             "listening for http connections on socket: `{:?}",
             &self.socket
         );
-        loop {
-            match self.socket.accept() {
-                Ok((sock, _addr)) => {
-                    // let mut stream = stream.unwrap();
-                    let root = self.root.clone();
-                    self.threads.execute(move || {
-                        info!("received tcp connection");
-                        match handle(&sock, root) {
-                            Ok(buf) => {
-                                let _ = sock.write(&buf);
-                            }
-                            Err(e) => {
-                                error!("error reading tcp stream: `{:?}`", e);
-                            }
-                        }
-                    })
+        for stream in self.socket.incoming() {
+            let mut stream = stream.unwrap();
+            let root = self.root.clone();
+            self.threads.execute(move || {
+                info!("received tcp connection");
+                match handle(&mut stream, root) {
+                    Ok(buf) => {
+                        let _ = stream.write(&buf);
+                    }
+                    Err(e) => {
+                        error!("error reading tcp stream: `{:?}`", e);
+                    }
                 }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
-                Err(e) => error!("error accepting connection: `{:?}`", e),
-            }
+            })
         }
     }
 }
 
-fn handle(stream: &mio::net::TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
+fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
     trace!("received server session: `{:?}`", &stream);
     let mut buf = match BufReader::new(stream).fill_buf() {
         Ok(v) => {

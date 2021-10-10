@@ -24,6 +24,13 @@ where
 {
     fn new(opts: Vec<cli::CliOpt>) -> T;
     fn listen(&mut self);
+}
+
+pub trait ServerSecure<T, E>
+where
+    T: Sized,
+    E: Sized,
+{
     fn accept(&mut self) -> Result<(), E>;
     fn event(&mut self, event: &mio::event::Event) -> Result<(), E>;
 }

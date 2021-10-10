@@ -2,7 +2,8 @@ use crate::{
     cli::{Build, CliOpt, Other},
     net::{SocketBuilder, TcpSocket},
     srv::{
-        Connection, Server, ServerError, ServerRootBuilder, SERVER_QUEUE_SIZE, SERVER_SOCKET_TOKEN,
+        Connection, Server, ServerError, ServerRootBuilder, ServerSecure, SERVER_QUEUE_SIZE,
+        SERVER_SOCKET_TOKEN,
     },
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
@@ -17,7 +18,7 @@ pub struct HttpsServer {
     pub socket: TcpSocket,
     pub connections: HashMap<mio::Token, Connection>,
     pub poll: mio::Poll,
-    pub events: mio::Events,
+    // pub events: mio::Events,
     pub root: PathBuf,
     pub next_conn_id: usize,
     pub threads: ThreadPool,
@@ -28,7 +29,7 @@ impl Server<Self, ServerError> for HttpsServer {
     fn new(opts: Vec<CliOpt>) -> Self {
         info!("initializing https server with options: `{:?}`", &opts);
 
-        let socket_builder = SocketBuilder::new(opts);
+        let socket_builder = SocketBuilder::<TcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
         let server_root_builder = ServerRootBuilder::new(thread_pool_builder.other());
         let tls_config_builder = TlsConfigBuilder::new(server_root_builder.other());
@@ -63,7 +64,6 @@ impl Server<Self, ServerError> for HttpsServer {
             }
         }
 
-        let events = mio::Events::with_capacity(SERVER_QUEUE_SIZE);
         let connections = HashMap::new();
         let next_conn_id = 1;
 
@@ -71,7 +71,7 @@ impl Server<Self, ServerError> for HttpsServer {
             socket,
             connections,
             poll,
-            events,
+            // events,
             root,
             next_conn_id,
             threads,
@@ -79,10 +79,12 @@ impl Server<Self, ServerError> for HttpsServer {
         }
     }
     fn listen(&mut self) {
+        let mut events = mio::Events::with_capacity(SERVER_QUEUE_SIZE);
+
         loop {
-            match self.poll.poll(&mut self.events, None) {
+            match self.poll.poll(&mut events, None) {
                 Ok(_) => {
-                    for event in self.events.iter() {
+                    for event in events.iter() {
                         match event.token() {
                             SERVER_SOCKET_TOKEN => match self.accept() {
                                 Err(e) => error!("error accepting connection: {:?}", e),
@@ -101,6 +103,9 @@ impl Server<Self, ServerError> for HttpsServer {
             }
         }
     }
+}
+
+impl ServerSecure<Self, ServerError> for HttpsServer {
     fn accept(&mut self) -> Result<(), ServerError> {
         loop {
             match self.socket.accept() {
@@ -129,12 +134,15 @@ impl Server<Self, ServerError> for HttpsServer {
     fn event(&mut self, event: &mio::event::Event) -> Result<(), ServerError> {
         let token = event.token();
         if self.connections.contains_key(&token) {
-            handle(
+            match handle(
                 event,
                 self.connections.get_mut(&token).unwrap(),
                 &self.poll,
                 &self.root,
-            );
+            ) {
+                Err(e) => error!("error handling connection: `{:?}`", e),
+                _ => {}
+            }
 
             if self.connections.get(&token).unwrap().is_closed() {
                 self.connections.remove(&token);

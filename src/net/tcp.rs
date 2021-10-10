@@ -47,3 +47,19 @@ impl mio::event::Source for TcpSocket {
         self.socket.deregister(registry)
     }
 }
+
+#[derive(Debug)]
+pub struct SimpleTcpSocket {
+    socket: std::net::TcpListener,
+}
+
+impl SimpleTcpSocket {
+    pub fn new(addr: IpAddr, port: u16) -> SimpleTcpSocket {
+        let address = SocketAddr::new(addr, port);
+        let socket = std::net::TcpListener::bind(address).unwrap();
+        SimpleTcpSocket { socket }
+    }
+    pub fn incoming(&mut self) -> std::net::Incoming {
+        self.socket.incoming()
+    }
+}

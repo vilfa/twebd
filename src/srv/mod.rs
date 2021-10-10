@@ -24,4 +24,6 @@ where
 {
     fn new(opts: Vec<cli::CliOpt>) -> T;
     fn listen(&mut self);
+    fn accept(&mut self) -> Result<(), E>;
+    fn event(&mut self, event: &mio::event::Event) -> Result<(), E>;
 }

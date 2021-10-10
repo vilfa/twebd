@@ -1,6 +1,6 @@
 use crate::{
     cli::{Build, CliOpt, Other},
-    net::{SocketBuilder, TcpSocket},
+    net::{SimpleTcpSocket, SocketBuilder},
     srv::{Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
@@ -17,7 +17,7 @@ use std::{
 };
 
 pub struct HttpServer {
-    socket: TcpSocket,
+    socket: SimpleTcpSocket,
     threads: ThreadPool,
     root: Arc<PathBuf>,
 }
@@ -26,7 +26,7 @@ impl Server<Self, ServerError> for HttpServer {
     fn new(opts: Vec<CliOpt>) -> Self {
         info!("initializing http server with options: `{:?}`", &opts);
 
-        let socket_builder = SocketBuilder::new(opts);
+        let socket_builder = SocketBuilder::<SimpleTcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
         let server_root_builder = ServerRootBuilder::new(thread_pool_builder.other());
 

@@ -1,8 +1,9 @@
+use crate::srv::ConnectionError;
 use log::{debug, error, trace};
 use std::io::{Read, Write};
 
 pub struct Connection {
-    socket: std::net::TcpStream,
+    socket: mio::net::TcpStream,
     token: mio::Token,
     tls_conn: rustls::ServerConnection,
     closing: bool,
@@ -11,7 +12,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(
-        socket: std::net::TcpStream,
+        socket: mio::net::TcpStream,
         token: mio::Token,
         tls_conn: rustls::ServerConnection,
     ) -> Self {
@@ -23,7 +24,7 @@ impl Connection {
             closed: false,
         }
     }
-    pub fn shutdown(&self, how: std::net::Shutdown, registry: &mio::Registry) {
+    pub fn shutdown(&mut self, how: std::net::Shutdown, registry: &mio::Registry) {
         match self.socket.shutdown(how) {
             _ => {
                 self.closed = true;
@@ -63,41 +64,66 @@ impl Connection {
             mio::Interest::WRITABLE
         }
     }
-    fn read_tls(&mut self) {
+    pub fn read_tls(&mut self) -> Result<usize, ConnectionError> {
         match self.tls_conn.read_tls(&mut self.socket) {
-            Ok(size) => debug!("read tls from socket: {} bytes", size),
-            Err(e) => error!("error reading from socket: `{:?}`", e),
+            Ok(size) => {
+                debug!("read tls from socket: {} bytes", size);
+                Ok(size)
+            }
+            Err(e) => {
+                error!("error reading from socket: `{:?}`", e);
+                Err(ConnectionError::TlsReadError(e))
+            }
         }
     }
-    fn process_tls(&mut self) {
+    pub fn process_tls(&mut self) -> Result<rustls::IoState, ConnectionError> {
         match self.tls_conn.process_new_packets() {
             Ok(v) => {
                 debug!("successfully processed new tls packets");
                 trace!("tls packet iostate: `{:?}`", &v);
-                if v.plaintext_bytes_to_read() > 0 {
-                    self.read_plain(v.plaintext_bytes_to_read());
-                }
+                Ok(v)
             }
-            Err(e) => error!("error processing new tls packets: `{:?}`", e),
+            Err(e) => {
+                error!("error processing new tls packets: `{:?}`", e);
+                Err(ConnectionError::TlsProcessError(e))
+            }
         }
     }
-    fn read_plain(&mut self, size: usize) {
-        let mut buf: Vec<u8> = Vec::with_capacity(size);
+    pub fn read_plain(&mut self, size: usize) -> Result<Vec<u8>, ConnectionError> {
+        let mut buf: Vec<u8> = vec![0; size];
         match self.tls_conn.reader().read(&mut buf) {
-            Ok(v) => debug!("read plaintext from session: {} bytes", v),
-            Err(e) => error!("error reading plaintext from session: `{:?}`", e),
+            Ok(size) => {
+                debug!("read plaintext from session: {} bytes", size);
+                Ok(buf)
+            }
+            Err(e) => {
+                error!("error reading plaintext from session: `{:?}`", e);
+                Err(ConnectionError::PlainReadError(e))
+            }
         }
     }
-    fn write_plain(&mut self, buf: Vec<u8>) {
+    pub fn write_plain(&mut self, buf: Vec<u8>) -> Result<usize, ConnectionError> {
         match self.tls_conn.writer().write(&buf) {
-            Ok(size) => debug!("write plaintext to session: {} bytes", size),
-            Err(e) => error!("error writing plaintext to session `{:?}`", e),
+            Ok(size) => {
+                debug!("write plaintext to session: {} bytes", size);
+                Ok(size)
+            }
+            Err(e) => {
+                error!("error writing plaintext to session `{:?}`", e);
+                Err(ConnectionError::PlainWriteError(e))
+            }
         }
     }
-    fn write_tls(&mut self) {
+    pub fn write_tls(&mut self) -> Result<usize, ConnectionError> {
         match self.tls_conn.write_tls(&mut self.socket) {
-            Ok(size) => debug!("write tls to socket: {} bytes", size),
-            Err(e) => error!("error writing tls to socket: `{:?}`", e),
+            Ok(size) => {
+                debug!("write tls to socket: {} bytes", size);
+                Ok(size)
+            }
+            Err(e) => {
+                error!("error writing tls to socket: `{:?}`", e);
+                Err(ConnectionError::TlsWriteError(e))
+            }
         }
     }
 }

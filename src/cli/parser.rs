@@ -35,9 +35,9 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .long("address")
                 .required(false)
                 .takes_value(true)
-                .value_name("ADDRESS")
+                .value_name("IPV4_OR_6")
                 .max_values(1)
-                .help("Sets the server ip address"),
+                .long_help("Sets the server IP address. Both IPv4 and IPv6 are supported."),
         )
         .arg(
             Arg::with_name("port")
@@ -47,28 +47,19 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .takes_value(true)
                 .value_name("PORT")
                 .max_values(1)
-                .help("Sets the server port number [possible values: 1..65535]"),
+                .long_help(
+                    "Sets the server port number [possible values: 1..65535]. Please note, that ports lower than including 1024 are system reserved and cannot be used, unless running as root which SHOULD NOT be done.",
+                ),
         )
-        // .arg(
-        //     Arg::with_name("protocol")
-        //         .short("d")
-        //         .long("protocol")
-        //         .required(false)
-        //         .takes_value(true)
-        //         .possible_values(&["tcp", "udp"])
-        //         .value_name("PROTOCOL")
-        //         .max_values(1)
-        //         .help("Sets the server data layer protocol"),
-        // )
         .arg(
             Arg::with_name("directory")
                 .short("f")
                 .long("directory")
                 .required(false)
                 .takes_value(true)
-                .value_name("DIRECTORY")
+                .value_name("ROOT_PATH")
                 .max_values(1)
-                .help("Sets the server directory"),
+                .long_help("Sets the server root directory. This is the so called public_html/wwwroot directory, from which web content is served."),
         )
         .arg(
             Arg::with_name("loglevel")
@@ -79,7 +70,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .possible_values(&["error", "warn", "info", "debug", "trace"])
                 .value_name("LEVEL")
                 .max_values(1)
-                .help("Sets the server logging verbosity"),
+                .long_help("Sets the server logging verbosity. Anything higher than info is not recommended, as it is very verbose."),
         )
         .arg(
             Arg::with_name("threads")
@@ -89,29 +80,36 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .takes_value(true)
                 .value_name("N_THREADS")
                 .max_values(1)
-                .help("Sets the number of threads used by the server [possible values: 1..10]"),
+                .long_help(
+                    "Sets the number of threads used by the server [possible values: 1..10]. Multi-threading is only supported for the http traffic. A reasonable maximum is set at 10 threads.",
+                ),
         )
         .arg(
             Arg::with_name("https")
+                .short("s")
                 .long("https")
                 .required(false)
                 .requires_all(&["https-cert", "https-priv-key"])
                 .takes_value(false)
-                .help("Use https. Must also specify certificate and private key"),
+                .long_help("Use https. You must also specify certificate and private key files, which can be generated using the openssl utility."),
         )
         .arg(
             Arg::with_name("https-cert")
                 .long("https-cert")
                 .requires("https")
                 .takes_value(true)
-                .help("File path to server certificate file"),
+                .value_name("CERT_PATH")
+                .max_values(1)
+                .long_help("File path to server certificate file. This is the certificate that the server presents to the web browser when negotiating a TLS session."),
         )
         .arg(
             Arg::with_name("https-priv-key")
                 .long("https-priv-key")
                 .requires("https")
                 .takes_value(true)
-                .help("File path to the server key file"),
+                .value_name("PRIV_KEY_PATH")
+                .max_values(1)
+                .long_help("File path to the server key file. This is the key used for negotiating the TLS cipher suite with the browser."),
         )
         .get_matches()
 }

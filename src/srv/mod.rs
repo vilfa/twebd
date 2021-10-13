@@ -8,7 +8,7 @@ pub mod root;
 pub use conn::Connection;
 pub use err::{ConnectionError, ServerError, ServerRootError};
 pub use file::{File, FileReader};
-// pub use http::HttpServer;
+pub use http::HttpServer;
 pub use https::HttpsServer;
 pub use root::ServerRootBuilder;
 

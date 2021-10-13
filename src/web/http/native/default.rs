@@ -14,7 +14,7 @@ impl Default for HttpBody {
 impl Default for HttpHeader {
     fn default() -> Self {
         let mut headers = HashMap::new();
-        headers.insert(String::from("Date"), Utc::now().to_rfc3339());
+        headers.insert(String::from("Date"), Utc::now().to_rfc2822());
         headers.insert(
             String::from("Server"),
             format!("{}/{}", APP_NAME, APP_VERSION),

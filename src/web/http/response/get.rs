@@ -35,14 +35,8 @@ pub fn get(uri: &PathBuf, srv_root: &PathBuf) -> HttpResponse {
     };
 
     let mut response = HttpResponse::default();
-    response.add_header(
-        String::from("Content-Type"),
-        String::from(resource.mime().essence_str()),
-    );
-    response.add_header(
-        String::from("Content-Length"),
-        format!("{}", resource.size()),
-    );
+    response.content_type(resource.mime().essence_str().to_owned());
+    response.content_length(resource.size());
     response.body = HttpBody::new(resource.as_string());
 
     debug!("built response");

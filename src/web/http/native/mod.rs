@@ -122,5 +122,12 @@ impl HttpResponse {
     pub fn add_header(&mut self, key: String, value: String) {
         let _ = self.header.headers.insert(key, value);
     }
-    // todo - add methods for easily appending headers.
+    pub fn content_type(&mut self, v: String) {
+        self.header.headers.insert(String::from("Content-Type"), v);
+    }
+    pub fn content_length(&mut self, v: usize) {
+        self.header
+            .headers
+            .insert(String::from("Content-Length"), format!("{}", v));
+    }
 }

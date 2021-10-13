@@ -1,7 +1,6 @@
 use crate::{
     cli::{defaults, parser},
-    // srv::{HttpServer, HttpsServer, Server},
-    srv::{HttpsServer, Server},
+    srv::{HttpServer, HttpsServer, Server},
 };
 use log::error;
 
@@ -14,7 +13,7 @@ pub fn run() {
             if cli_config.https() {
                 HttpsServer::new(cli_config.cli_opts()).listen();
             } else {
-                // HttpServer::new(cli_config.cli_opts()).listen();
+                HttpServer::new(cli_config.cli_opts()).listen();
             }
         }
         Err(e) => error!("{:?}", e),

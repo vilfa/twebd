@@ -18,7 +18,6 @@ pub struct HttpsServer {
     pub socket: TcpSocket,
     pub connections: HashMap<mio::Token, Connection>,
     pub poll: mio::Poll,
-    // pub events: mio::Events,
     pub root: PathBuf,
     pub next_conn_id: usize,
     pub threads: ThreadPool,
@@ -71,7 +70,6 @@ impl Server<Self, ServerError> for HttpsServer {
             socket,
             connections,
             poll,
-            // events,
             root,
             next_conn_id,
             threads,
@@ -196,50 +194,3 @@ fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
     trace!("parsed request: `{:?}`", req);
     HttpHandler::<HttpResponse>::handle(req, root)
 }
-
-// fn accept(
-//     socket: &TcpSocket,
-//     connections: &mut HashMap<mio::Token, Connection>,
-//     poll: &mio::Poll,
-//     next_conn_id: &usize,
-//     tls_config: Arc<rustls::ServerConfig>,
-// ) -> Result<(), ServerError> {
-//     loop {
-//         match socket.accept() {
-//             Ok((sock, addr)) => {
-//                 debug!(
-//                     "accepting new connection on socket: from: `{:?}` `{:?}`",
-//                     &sock, &addr
-//                 );
-
-//                 let token = mio::Token(*next_conn_id);
-//                 let tls_connection = rustls::ServerConnection::new(tls_config.clone()).unwrap();
-//                 let mut connection = Connection::new(sock, token, tls_connection);
-//                 connection.register(poll.registry());
-//                 connections.insert(token, connection);
-//             }
-//             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
-//             Err(e) => {
-//                 error!("error accepting connection: `{:?}`", e);
-//                 return Err(ServerError::SessionIoError(e));
-//             }
-//         }
-//     }
-// }
-
-// fn event(
-//     connections: &mut HashMap<mio::Token, Connection>,
-//     event: &mio::event::Event,
-//     poll: &mio::Poll,
-//     root: &PathBuf,
-// ) -> Result<(), ServerError> {
-//     let token = event.token();
-//     if connections.contains_key(&token) {
-//         handle(event, connections.get_mut(&token).unwrap(), poll, root);
-
-//         if connections.get(&token).unwrap().is_closed() {
-//             connections.remove(&token);
-//         }
-//     }
-//     Ok(())
-// }

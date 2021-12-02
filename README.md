@@ -1,4 +1,4 @@
-# Twebd
+# twebd
 
 Twebd is a **t**iny **web** **d**aemon with very simple multi-threading and support for both http and https. 
 This project was made for fun, its aim is to provide simple web server functionaility for personal projects.

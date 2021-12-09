@@ -58,7 +58,7 @@ OPTIONS:
             [possible values: error, warn, info, debug, trace]
     -p, --port <PORT>                       
             Sets the server port number [possible values: 1..65535]. Please note, that ports lower than including 1024
-            are system reserved and cannot be used, unless running as root which SHOULD NOT be done.
+            are system reserved and cannot be used.
     -t, --threads <N_THREADS>               
             Sets the number of threads used by the server [possible values: 1..10]. Multi-threading is only supported
             for the http traffic. A reasonable maximum is set at 10 threads.

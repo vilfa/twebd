@@ -48,7 +48,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .value_name("PORT")
                 .max_values(1)
                 .long_help(
-                    "Sets the server port number [possible values: 1..65535]. Please note, that ports lower than including 1024 are system reserved and cannot be used, unless running as root which SHOULD NOT be done.",
+                    "Sets the server port number [possible values: 1..65535]. Please note, that ports lower than including 1024 are system reserved and cannot be used.",
                 ),
         )
         .arg(

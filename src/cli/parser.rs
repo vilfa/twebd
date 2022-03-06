@@ -259,7 +259,10 @@ fn https(matches: &clap::ArgMatches) -> CliOpt {
     if matches.is_present("https") {
         CliOpt::Https(true)
     } else {
-        warn!("https option not specified, using default");
+        warn!(
+            "https option not specified, using default: `{}`",
+            defaults::https()
+        );
         CliOpt::Https(defaults::https())
     }
 }

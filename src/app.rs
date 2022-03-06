@@ -33,3 +33,8 @@ impl log::Log for Logger {
     }
     fn flush(&self) {}
 }
+
+static LOGGER: Logger = Logger;
+pub fn init_logger(log_level: log::LevelFilter) -> Result<(), log::SetLoggerError> {
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(log_level))
+}

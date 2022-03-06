@@ -75,9 +75,9 @@ impl Parse<&String, Self, E> for HttpMethod {
 impl Parse<&String, Self, E> for HttpVersion {
     fn parse(v: &String) -> Result<Self, E> {
         match &v.to_uppercase()[..] {
+            "HTTP/1.0" => Ok(HttpVersion::Http11),
             "HTTP/1.1" => Ok(HttpVersion::Http11),
             "HTTP/2.0" => Ok(HttpVersion::Http20),
-            "HTTP/3.0" => Ok(HttpVersion::Http30),
             _ => Err(HttpParseError::HttpMethodParseErr(format!(
                 "expected a valid http version, got: `{}`",
                 v

@@ -24,7 +24,7 @@ pub struct HttpServer {
 
 impl Server<Self, ServerError> for HttpServer {
     fn new(opts: Vec<CliOpt>) -> Self {
-        info!("initializing http server with options: `{:?}`", &opts);
+        info!("initializing http server with options: {:?}", &opts);
 
         let socket_builder = SocketBuilder::<SimpleTcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
@@ -55,7 +55,7 @@ impl Server<Self, ServerError> for HttpServer {
                         let _ = stream.write(&buf);
                     }
                     Err(e) => {
-                        error!("error reading tcp stream: `{:?}`", e);
+                        error!("error reading tcp stream: {:?}", e);
                     }
                 }
             })
@@ -64,14 +64,14 @@ impl Server<Self, ServerError> for HttpServer {
 }
 
 fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    trace!("received server session: `{:?}`", &stream);
+    trace!("received server session: {:?}", &stream);
     let mut buf = match BufReader::new(stream).fill_buf() {
         Ok(v) => {
             debug!("read data from session: {} bytes", v.len());
             v.to_vec()
         }
         Err(e) => {
-            error!("error reading data from session: `{:?}`", e);
+            error!("error reading data from session: {:?}", e);
             return Err(ServerError::SessionIoError(e));
         }
     };
@@ -81,12 +81,12 @@ fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerE
 }
 
 fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-    trace!("received buffer: `{:?}`", &buf);
-    trace!("buffer as string: `{:?}`", buffer_to_string(&buf)?);
+    trace!("received buffer: {:?}", &buf);
+    trace!("buffer as string: {:?}", buffer_to_string(&buf)?);
     HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
 }
 
 fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-    trace!("parsed request: `{:?}`", &req);
+    trace!("parsed request: {:?}", &req);
     HttpHandler::<HttpResponse>::handle(req, root)
 }

@@ -71,7 +71,7 @@ impl Connection {
                 Ok(size)
             }
             Err(e) => {
-                error!("error reading from socket: `{:?}`", e);
+                error!("error reading from socket: {:?}", e);
                 Err(ConnectionError::TlsReadError(e))
             }
         }
@@ -80,11 +80,11 @@ impl Connection {
         match self.tls_conn.process_new_packets() {
             Ok(v) => {
                 debug!("successfully processed new tls packets");
-                trace!("tls packet iostate: `{:?}`", &v);
+                trace!("tls packet iostate: {:?}", &v);
                 Ok(v)
             }
             Err(e) => {
-                error!("error processing new tls packets: `{:?}`", e);
+                error!("error processing new tls packets: {:?}", e);
                 Err(ConnectionError::TlsProcessError(e))
             }
         }
@@ -97,7 +97,7 @@ impl Connection {
                 Ok(buf)
             }
             Err(e) => {
-                error!("error reading plaintext from session: `{:?}`", e);
+                error!("error reading plaintext from session: {:?}", e);
                 Err(ConnectionError::PlainReadError(e))
             }
         }
@@ -109,7 +109,7 @@ impl Connection {
                 Ok(size)
             }
             Err(e) => {
-                error!("error writing plaintext to session `{:?}`", e);
+                error!("error writing plaintext to session {:?}", e);
                 Err(ConnectionError::PlainWriteError(e))
             }
         }
@@ -121,7 +121,7 @@ impl Connection {
                 Ok(size)
             }
             Err(e) => {
-                error!("error writing tls to socket: `{:?}`", e);
+                error!("error writing tls to socket: {:?}", e);
                 Err(ConnectionError::TlsWriteError(e))
             }
         }

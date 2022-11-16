@@ -33,7 +33,7 @@ impl Build<Self, TcpSocket, SocketError> for SocketBuilder<TcpSocket> {
             }
         }
 
-        trace!("constructed socket builder: `{:?}`", &socket_builder);
+        trace!("constructed socket builder: {:?}", &socket_builder);
 
         socket_builder
     }
@@ -53,7 +53,7 @@ impl Build<Self, SimpleTcpSocket, SocketError> for SocketBuilder<SimpleTcpSocket
             }
         }
 
-        trace!("constructed socket builder: `{:?}`", &socket_builder);
+        trace!("constructed socket builder: {:?}", &socket_builder);
 
         socket_builder
     }

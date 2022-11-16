@@ -70,7 +70,7 @@ impl Build<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
         }
 
         trace!(
-            "constructed thread pool builder: `{:?}`",
+            "constructed thread pool builder: {:?}",
             &thread_pool_builder
         );
         thread_pool_builder

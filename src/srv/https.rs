@@ -26,7 +26,7 @@ pub struct HttpsServer {
 
 impl Server<Self, ServerError> for HttpsServer {
     fn new(opts: Vec<CliOpt>) -> Self {
-        info!("initializing https server with options: `{:?}`", &opts);
+        info!("initializing https server with options: {:?}", &opts);
 
         let socket_builder = SocketBuilder::<TcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
@@ -41,7 +41,7 @@ impl Server<Self, ServerError> for HttpsServer {
         let poll = match mio::Poll::new() {
             Ok(v) => v,
             Err(e) => {
-                error!("error creating io poll instance: `{:?}`", e);
+                error!("error creating io poll instance: {:?}", e);
                 panic!();
             }
         };
@@ -51,12 +51,12 @@ impl Server<Self, ServerError> for HttpsServer {
             .register(&mut socket, SERVER_SOCKET_TOKEN, mio::Interest::READABLE)
         {
             Ok(_) => debug!(
-                "registered readable interest for server socket: `{:?}`",
+                "registered readable interest for server socket: {:?}",
                 &socket
             ),
             Err(e) => {
                 error!(
-                    "error registering readable interest for server socket: `{:?}`: `{:?}`",
+                    "error registering readable interest for server socket: {:?}: {:?}",
                     &socket, e
                 );
                 panic!();
@@ -89,14 +89,14 @@ impl Server<Self, ServerError> for HttpsServer {
                                 _ => {}
                             },
                             _ => match self.event(event) {
-                                Err(e) => error!("error handling request: `{:?}`", e),
+                                Err(e) => error!("error handling request: {:?}", e),
                                 _ => {}
                             },
                         }
                     }
                 }
                 Err(e) => {
-                    error!("socket polling error: `{:?}`", e);
+                    error!("socket polling error: {:?}", e);
                 }
             }
         }
@@ -109,7 +109,7 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
             match self.socket.accept() {
                 Ok((socket, address)) => {
                     debug!(
-                        "accepting new connection on socket: from: `{:?}` `{:?}`",
+                        "accepting new connection on socket: from: {:?} {:?}",
                         &socket, &address
                     );
                     let token = mio::Token(self.next_conn_id);
@@ -123,7 +123,7 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
                 Err(e) => {
-                    error!("error accepting connection: `{:?}`", e);
+                    error!("error accepting connection: {:?}", e);
                     return Err(ServerError::SessionIoError(e));
                 }
             }
@@ -138,7 +138,7 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
                 &self.poll,
                 &self.root,
             ) {
-                Err(e) => error!("error handling connection: `{:?}`", e),
+                Err(e) => error!("error handling connection: {:?}", e),
                 _ => {}
             }
 
@@ -183,7 +183,7 @@ fn handle(
 
 fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
     trace!(
-        "received buffer: as string: `{:?}` `{:?}`",
+        "received buffer: as string: {:?} {:?}",
         buf,
         buffer_to_string(buf)?
     );
@@ -191,6 +191,6 @@ fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
 }
 
 fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-    trace!("parsed request: `{:?}`", req);
+    trace!("parsed request: {:?}", req);
     HttpHandler::<HttpResponse>::handle(req, root)
 }

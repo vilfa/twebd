@@ -25,7 +25,7 @@ impl Parse<Vec<String>, Self, E> for HttpHeader {
                 }
                 _ => {
                     return Err(HttpParseError::HttpHeaderParseErr(format!(
-                        "invalid http header: `{:?}`",
+                        "invalid http header: {:?}",
                         header
                     )))
                 }
@@ -45,7 +45,7 @@ impl Parse<Vec<String>, Self, E> for HttpLine {
                 version: HttpVersion::parse(&v[2])?,
             }),
             _ => Err(HttpParseError::HttpRequestLineParseErr(format!(
-                "unknown error parsing http request line: `{:?}`",
+                "unknown error parsing http request line: {:?}",
                 &v
             ))),
         }
@@ -65,7 +65,7 @@ impl Parse<&String, Self, E> for HttpMethod {
             "CONNECT" => Ok(HttpMethod::Connect),
             "PATCH" => Ok(HttpMethod::Patch),
             _ => Err(E::HttpMethodParseErr(format!(
-                "expected a valid http method, got: `{}`",
+                "expected a valid http method, got: {}",
                 v
             ))),
         }
@@ -79,7 +79,7 @@ impl Parse<&String, Self, E> for HttpVersion {
             "HTTP/1.1" => Ok(HttpVersion::Http11),
             "HTTP/2.0" => Ok(HttpVersion::Http20),
             _ => Err(HttpParseError::HttpMethodParseErr(format!(
-                "expected a valid http version, got: `{}`",
+                "expected a valid http version, got: {}",
                 v
             ))),
         }

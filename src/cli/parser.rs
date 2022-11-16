@@ -145,7 +145,7 @@ fn address(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::Address(v),
             Err(e) => {
                 error!(
-                    "failed to parse the specified address: `{}`, using default: `{:?}`",
+                    "failed to parse the specified address: {}, using default: {:?}",
                     e,
                     defaults::address()
                 );
@@ -154,7 +154,7 @@ fn address(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "address not specified, using default: `{:?}`",
+            "address not specified, using default: {:?}",
             defaults::address()
         );
         CliOpt::Address(defaults::address())
@@ -167,7 +167,7 @@ fn port(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::Port(v),
             Err(e) => {
                 error!(
-                    "failed to parse the specified port: `{}`, using default: `{}`",
+                    "failed to parse the specified port: {}, using default: {}",
                     e,
                     defaults::port()
                 );
@@ -175,7 +175,7 @@ fn port(matches: &clap::ArgMatches) -> CliOpt {
             }
         }
     } else {
-        warn!("port not specified, using default: `{}`", defaults::port());
+        warn!("port not specified, using default: {}", defaults::port());
         CliOpt::Port(defaults::port())
     }
 }
@@ -186,7 +186,7 @@ fn directory(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::Directory(v),
             Err(e) => {
                 error!(
-                    "the specified path doesn't exist: `{}`, using default: `{:?}`",
+                    "the specified path doesn't exist: {}, using default: {:?}",
                     e,
                     defaults::directory()
                 );
@@ -195,7 +195,7 @@ fn directory(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "directory not specified, using default: `{:?}`",
+            "directory not specified, using default: {:?}",
             defaults::directory()
         );
         CliOpt::Directory(defaults::directory())
@@ -208,7 +208,7 @@ fn loglevel(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::Verbosity(v),
             Err(e) => {
                 error!(
-                    "failed to parse log level: `{}`, using default: `{}`",
+                    "failed to parse log level: {}, using default: {}",
                     e,
                     defaults::loglevel()
                 );
@@ -217,7 +217,7 @@ fn loglevel(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "log level not specified, using default: `{}`",
+            "log level not specified, using default: {}",
             defaults::loglevel()
         );
         CliOpt::Verbosity(defaults::loglevel())
@@ -230,7 +230,7 @@ fn threads(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => {
                 if v > defaults::threads_max() {
                     warn!(
-                        "max thread count is {}, using max. got: `{}`",
+                        "max thread count is {}, using max. got: {}",
                         defaults::threads_max(),
                         v
                     );
@@ -239,7 +239,7 @@ fn threads(matches: &clap::ArgMatches) -> CliOpt {
             }
             Err(e) => {
                 error!(
-                    "failed to parse thread count: `{}`, using default: `{}`",
+                    "failed to parse thread count: {}, using default: {}",
                     e,
                     defaults::threads()
                 );
@@ -248,7 +248,7 @@ fn threads(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "thread count not specified, using default: `{}`",
+            "thread count not specified, using default: {}",
             defaults::threads()
         );
         CliOpt::Threads(defaults::threads())
@@ -260,7 +260,7 @@ fn https(matches: &clap::ArgMatches) -> CliOpt {
         CliOpt::Https(true)
     } else {
         warn!(
-            "https option not specified, using default: `{}`",
+            "https option not specified, using default: {}",
             defaults::https()
         );
         CliOpt::Https(defaults::https())
@@ -273,7 +273,7 @@ fn https_cert(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::HttpsCert(v),
             Err(e) => {
                 error!(
-                    "the specified certificate path doesn't exist: `{}`, using default: `{:?}`",
+                    "the specified certificate path doesn't exist: {}, using default: {:?}",
                     e,
                     defaults::https_cert()
                 );
@@ -282,7 +282,7 @@ fn https_cert(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "certificate path not specified, using default: `{:?}`",
+            "certificate path not specified, using default: {:?}",
             defaults::https_cert()
         );
         CliOpt::HttpsCert(defaults::https_cert())
@@ -295,7 +295,7 @@ fn https_priv_key(matches: &clap::ArgMatches) -> CliOpt {
             Ok(v) => CliOpt::HttpsPrivKey(v),
             Err(e) => {
                 error!(
-                    "the specified private key path doesn't exist: `{}`, using default: `{:?}`",
+                    "the specified private key path doesn't exist: {}, using default: {:?}",
                     e,
                     defaults::https_priv_key()
                 );
@@ -304,7 +304,7 @@ fn https_priv_key(matches: &clap::ArgMatches) -> CliOpt {
         }
     } else {
         warn!(
-            "private key path not specified, using default: `{:?}`",
+            "private key path not specified, using default: {:?}",
             defaults::https_priv_key()
         );
         CliOpt::HttpsPrivKey(defaults::https_priv_key())

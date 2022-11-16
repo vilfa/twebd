@@ -22,7 +22,7 @@ impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
         }
 
         trace!(
-            "constructed server root builder: `{:?}`",
+            "constructed server root builder: {:?}",
             &server_root_builder
         );
         server_root_builder

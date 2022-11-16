@@ -69,17 +69,14 @@ fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
     let handle = std::fs::File::open(path)?;
     let mut buf_reader = std::io::BufReader::new(handle);
     match rustls_pemfile::pkcs8_private_keys(&mut buf_reader).map_err(|e| {
-        TlsConfigError::PrivateKeyError(format!(
-            "failed to load private key: `{:?}`: `{:?}`",
-            path, e,
-        ))
+        TlsConfigError::PrivateKeyError(format!("failed to load private key: {:?}: {:?}", path, e,))
     }) {
         Ok(priv_keys) => {
             if priv_keys.len() == 1 {
                 Ok(rustls::PrivateKey(priv_keys[0].to_vec()))
             } else {
                 Err(TlsConfigError::PrivateKeyError(format!(
-                    "expected exactly one private key, got: `{}`",
+                    "expected exactly one private key, got: {}",
                     priv_keys.len()
                 )))
             }
@@ -99,7 +96,7 @@ fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError>
             .map(|cert| rustls::Certificate(cert.to_vec()))
             .collect::<Vec<rustls::Certificate>>()),
         Err(e) => Err(TlsConfigError::CertificateError(format!(
-            "failed to load certificate or chain: `{:?}`: `{:?}`",
+            "failed to load certificate or chain: {:?}: {:?}",
             path, e
         ))),
     }

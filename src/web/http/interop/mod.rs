@@ -24,9 +24,9 @@ pub fn buffer_to_string(buf: &[u8]) -> Result<String, HttpParseError> {
                 let buf = r.replace_all(v.trim(), consts::WSPC).to_string();
                 Ok(buf)
             }
-            Err(e) => Err(HttpParseError::BufferParseError(format!("`{:?}`", e))),
+            Err(e) => Err(HttpParseError::BufferParseError(format!("{:?}", e))),
         },
-        Err(e) => Err(HttpParseError::BufferParseError(format!("`{:?}`", e))),
+        Err(e) => Err(HttpParseError::BufferParseError(format!("{:?}", e))),
     }
 }
 

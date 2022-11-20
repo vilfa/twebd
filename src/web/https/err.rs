@@ -1,14 +1,14 @@
 #[derive(Debug)]
 pub enum TlsConfigError {
-    CertificateError(String),
-    PrivateKeyError(String),
-    FileReaderError(String),
+    Certificate(String),
+    PrivateKey(String),
+    UnresolvablePath(String),
     TlsError(rustls::Error),
 }
 
 impl From<std::io::Error> for TlsConfigError {
     fn from(e: std::io::Error) -> Self {
-        TlsConfigError::FileReaderError(format!("{:?}", e))
+        TlsConfigError::UnresolvablePath(format!("{:?}", e))
     }
 }
 

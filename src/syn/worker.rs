@@ -25,11 +25,11 @@ impl Worker {
 
             match message {
                 Message::Job(job) => {
-                    debug!("worker {} got a job. executing", id);
+                    debug!("worker {} got a job", id);
                     job();
                 }
                 Message::Terminate => {
-                    debug!("worker {} got a terminate message. terminating", id);
+                    debug!("worker {} got a terminate message", id);
                     break;
                 }
             }

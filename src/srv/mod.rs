@@ -3,6 +3,7 @@ pub mod err;
 pub mod file;
 pub mod http;
 pub mod https;
+pub mod log;
 pub mod root;
 
 pub use conn::Connection;

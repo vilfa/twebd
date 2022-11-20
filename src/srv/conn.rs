@@ -72,7 +72,7 @@ impl Connection {
             }
             Err(e) => {
                 error!("error reading from socket: {:?}", e);
-                Err(ConnectionError::TlsReadError(e))
+                Err(ConnectionError::TlsRead(e))
             }
         }
     }
@@ -84,8 +84,8 @@ impl Connection {
                 Ok(v)
             }
             Err(e) => {
-                error!("error processing new tls packets: {:?}", e);
-                Err(ConnectionError::TlsProcessError(e))
+                trace!("error processing new tls packets: {:?}", e);
+                Err(ConnectionError::TlsProcess(e))
             }
         }
     }
@@ -98,7 +98,7 @@ impl Connection {
             }
             Err(e) => {
                 error!("error reading plaintext from session: {:?}", e);
-                Err(ConnectionError::PlainReadError(e))
+                Err(ConnectionError::PlainRead(e))
             }
         }
     }
@@ -110,7 +110,7 @@ impl Connection {
             }
             Err(e) => {
                 error!("error writing plaintext to session {:?}", e);
-                Err(ConnectionError::PlainWriteError(e))
+                Err(ConnectionError::PlainWrite(e))
             }
         }
     }
@@ -122,7 +122,7 @@ impl Connection {
             }
             Err(e) => {
                 error!("error writing tls to socket: {:?}", e);
-                Err(ConnectionError::TlsWriteError(e))
+                Err(ConnectionError::TlsWrite(e))
             }
         }
     }

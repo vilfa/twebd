@@ -2,15 +2,14 @@ use std::io;
 
 #[derive(Debug)]
 pub enum SocketError {
-    SocketInUse,
-    SocketNotConnected,
+    InUse,
+    NotConnected,
     InsufficientPrivileges,
-    SocketIoError(io::Error),
-    General(String),
+    Io(io::Error),
 }
 
 impl From<io::Error> for SocketError {
     fn from(e: io::Error) -> Self {
-        Self::SocketIoError(e)
+        Self::Io(e)
     }
 }

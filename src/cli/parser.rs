@@ -1,10 +1,10 @@
 use crate::{
-    app::{APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION},
-    cli::{defaults, CliOpt},
+    cli::{defaults, err::CliError, CliOpt},
+    APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };
 use clap::{App, Arg};
 use log::{error, warn};
-use std::{io::Result, net::IpAddr, path::PathBuf, str::FromStr};
+use std::{net::IpAddr, path::PathBuf, result::Result, str::FromStr};
 
 pub struct CliConfig {
     log_level: log::LevelFilter,
@@ -35,9 +35,9 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .long("address")
                 .required(false)
                 .takes_value(true)
-                .value_name("IPV4_OR_6")
+                .value_name("IP")
                 .max_values(1)
-                .long_help("Sets the server IP address. Both IPv4 and IPv6 are supported."),
+                .long_help("Sets the server IP (v4/v6) address"),
         )
         .arg(
             Arg::with_name("port")
@@ -47,19 +47,17 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .takes_value(true)
                 .value_name("PORT")
                 .max_values(1)
-                .long_help(
-                    "Sets the server port number [possible values: 1..65535]. Please note, that ports lower than including 1024 are system reserved and cannot be used.",
-                ),
+                .long_help("Sets the server port number [possible values: 1..65535]"),
         )
         .arg(
             Arg::with_name("directory")
-                .short("f")
+                .short("d")
                 .long("directory")
                 .required(false)
                 .takes_value(true)
                 .value_name("ROOT_PATH")
                 .max_values(1)
-                .long_help("Sets the server root directory. This is the so called public_html/wwwroot directory, from which web content is served."),
+                .long_help("Sets the server root/public_html/wwwroot directory"),
         )
         .arg(
             Arg::with_name("loglevel")
@@ -68,9 +66,9 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .required(false)
                 .takes_value(true)
                 .possible_values(&["error", "warn", "info", "debug", "trace"])
-                .value_name("LEVEL")
+                .value_name("LOG_LEVEL")
                 .max_values(1)
-                .long_help("Sets the server logging verbosity. Anything higher than info is not recommended, as it is very verbose."),
+                .long_help("Sets the server logging verbosity"),
         )
         .arg(
             Arg::with_name("threads")
@@ -81,7 +79,7 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .value_name("N_THREADS")
                 .max_values(1)
                 .long_help(
-                    "Sets the number of threads used by the server [possible values: 1..10]. Multi-threading is only supported for the http traffic. A reasonable maximum is set at 10 threads.",
+                    "Sets the number of threads used by the server [possible values: 1..10]",
                 ),
         )
         .arg(
@@ -89,67 +87,69 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
                 .short("s")
                 .long("https")
                 .required(false)
-                .requires_all(&["https-cert", "https-priv-key"])
+                .requires_all(&["https-cert", "https-key"])
                 .takes_value(false)
-                .long_help("Use https. You must also specify certificate and private key files, which can be generated using the openssl utility."),
+                .long_help("Use https, requires a certificate and private key"),
         )
         .arg(
             Arg::with_name("https-cert")
+                .short("c")
                 .long("https-cert")
                 .requires("https")
                 .takes_value(true)
                 .value_name("CERT_PATH")
                 .max_values(1)
-                .long_help("File path to server certificate file. This is the certificate that the server presents to the web browser when negotiating a TLS session."),
+                .long_help("Path to the server certificate file"),
         )
         .arg(
-            Arg::with_name("https-priv-key")
-                .long("https-priv-key")
+            Arg::with_name("https-key")
+                .short("k")
+                .long("https-key")
                 .requires("https")
                 .takes_value(true)
-                .value_name("PRIV_KEY_PATH")
+                .value_name("KEY_PATH")
                 .max_values(1)
-                .long_help("File path to the server key file. This is the key used for negotiating the TLS cipher suite with the browser."),
+                .long_help("Path to the server private key file"),
         )
         .get_matches()
 }
 
-pub fn parse_matches(matches: &clap::ArgMatches) -> Result<CliConfig> {
+pub fn parse_matches(matches: &clap::ArgMatches) -> Result<CliConfig, CliError> {
+    let https = if let CliOpt::Https(v) = https(matches)? {
+        v
+    } else {
+        defaults::https()
+    };
+
+    let log_level = if let CliOpt::Verbosity(v) = loglevel(matches)? {
+        v
+    } else {
+        defaults::loglevel()
+    };
+
     let cli_opts = vec![
-        address(matches),
-        port(matches),
-        directory(matches),
-        threads(matches),
-        https_cert(matches),
-        https_priv_key(matches),
+        address(matches)?,
+        port(matches)?,
+        directory(matches)?,
+        threads(matches)?,
+        https_cert(matches, &https)?,
+        https_priv_key(matches, &https)?,
     ];
 
     Ok(CliConfig {
-        log_level: if let CliOpt::Verbosity(v) = loglevel(matches) {
-            v
-        } else {
-            defaults::loglevel()
-        },
-        https: if let CliOpt::Https(v) = https(matches) {
-            v
-        } else {
-            defaults::https()
-        },
+        log_level,
+        https,
         cli_opts,
     })
 }
 
-fn address(matches: &clap::ArgMatches) -> CliOpt {
+fn address(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("address") {
         match v.parse::<IpAddr>() {
-            Ok(v) => CliOpt::Address(v),
+            Ok(v) => Ok(CliOpt::Address(v)),
             Err(e) => {
-                error!(
-                    "failed to parse the specified address: {}, using default: {:?}",
-                    e,
-                    defaults::address()
-                );
-                CliOpt::Address(defaults::address())
+                error!("failed to parse the specified address: {}", e);
+                Err(CliError::Parse(e.to_string()))
             }
         }
     } else {
@@ -157,40 +157,32 @@ fn address(matches: &clap::ArgMatches) -> CliOpt {
             "address not specified, using default: {:?}",
             defaults::address()
         );
-        CliOpt::Address(defaults::address())
+        Ok(CliOpt::Address(defaults::address()))
     }
 }
 
-fn port(matches: &clap::ArgMatches) -> CliOpt {
+fn port(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("port") {
         match v.parse::<u16>() {
-            Ok(v) => CliOpt::Port(v),
+            Ok(v) => Ok(CliOpt::Port(v)),
             Err(e) => {
-                error!(
-                    "failed to parse the specified port: {}, using default: {}",
-                    e,
-                    defaults::port()
-                );
-                CliOpt::Port(defaults::port())
+                error!("failed to parse the specified port: {}", e);
+                Err(CliError::Parse(e.to_string()))
             }
         }
     } else {
         warn!("port not specified, using default: {}", defaults::port());
-        CliOpt::Port(defaults::port())
+        Ok(CliOpt::Port(defaults::port()))
     }
 }
 
-fn directory(matches: &clap::ArgMatches) -> CliOpt {
+fn directory(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("directory") {
         match PathBuf::from(v).canonicalize() {
-            Ok(v) => CliOpt::Directory(v),
+            Ok(v) => Ok(CliOpt::Directory(v)),
             Err(e) => {
-                error!(
-                    "the specified path doesn't exist: {}, using default: {:?}",
-                    e,
-                    defaults::directory()
-                );
-                CliOpt::Directory(defaults::directory())
+                error!("the specified path doesn't exist: {}", e);
+                Err(CliError::Parse(e.to_string()))
             }
         }
     } else {
@@ -198,21 +190,17 @@ fn directory(matches: &clap::ArgMatches) -> CliOpt {
             "directory not specified, using default: {:?}",
             defaults::directory()
         );
-        CliOpt::Directory(defaults::directory())
+        Ok(CliOpt::Directory(defaults::directory()))
     }
 }
 
-fn loglevel(matches: &clap::ArgMatches) -> CliOpt {
+fn loglevel(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("loglevel") {
         match log::LevelFilter::from_str(&v) {
-            Ok(v) => CliOpt::Verbosity(v),
+            Ok(v) => Ok(CliOpt::Verbosity(v)),
             Err(e) => {
-                error!(
-                    "failed to parse log level: {}, using default: {}",
-                    e,
-                    defaults::loglevel()
-                );
-                CliOpt::Verbosity(defaults::loglevel())
+                error!("failed to parse log level: {}", e);
+                Err(CliError::Parse(e.to_string()))
             }
         }
     } else {
@@ -220,11 +208,11 @@ fn loglevel(matches: &clap::ArgMatches) -> CliOpt {
             "log level not specified, using default: {}",
             defaults::loglevel()
         );
-        CliOpt::Verbosity(defaults::loglevel())
+        Ok(CliOpt::Verbosity(defaults::loglevel()))
     }
 }
 
-fn threads(matches: &clap::ArgMatches) -> CliOpt {
+fn threads(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("threads") {
         match v.parse::<usize>() {
             Ok(v) => {
@@ -235,15 +223,11 @@ fn threads(matches: &clap::ArgMatches) -> CliOpt {
                         v
                     );
                 }
-                CliOpt::Threads(std::cmp::min(v, defaults::threads_max()))
+                Ok(CliOpt::Threads(std::cmp::min(v, defaults::threads_max())))
             }
             Err(e) => {
-                error!(
-                    "failed to parse thread count: {}, using default: {}",
-                    e,
-                    defaults::threads()
-                );
-                CliOpt::Threads(defaults::threads())
+                error!("failed to parse thread count: {}", e);
+                Err(CliError::Parse(e.to_string()))
             }
         }
     } else {
@@ -251,62 +235,62 @@ fn threads(matches: &clap::ArgMatches) -> CliOpt {
             "thread count not specified, using default: {}",
             defaults::threads()
         );
-        CliOpt::Threads(defaults::threads())
+        Ok(CliOpt::Threads(defaults::threads()))
     }
 }
 
-fn https(matches: &clap::ArgMatches) -> CliOpt {
+fn https(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if matches.is_present("https") {
-        CliOpt::Https(true)
+        Ok(CliOpt::Https(true))
     } else {
         warn!(
             "https option not specified, using default: {}",
             defaults::https()
         );
-        CliOpt::Https(defaults::https())
+        Ok(CliOpt::Https(defaults::https()))
     }
 }
 
-fn https_cert(matches: &clap::ArgMatches) -> CliOpt {
-    if let Some(v) = matches.value_of("directory") {
-        match PathBuf::from(v).canonicalize() {
-            Ok(v) => CliOpt::HttpsCert(v),
-            Err(e) => {
-                error!(
-                    "the specified certificate path doesn't exist: {}, using default: {:?}",
-                    e,
-                    defaults::https_cert()
-                );
-                CliOpt::HttpsCert(defaults::https_cert())
+fn https_cert(matches: &clap::ArgMatches, https: &bool) -> Result<CliOpt, CliError> {
+    if *https {
+        if let Some(v) = matches.value_of("https-cert") {
+            match PathBuf::from(v).canonicalize() {
+                Ok(v) => Ok(CliOpt::HttpsCert(Some(v))),
+                Err(e) => {
+                    error!("the specified certificate path doesn't exist: {}", e);
+                    Err(CliError::Parse(e.to_string()))
+                }
             }
+        } else {
+            warn!(
+                "certificate path not specified, using default: {:?}",
+                defaults::https_cert()
+            );
+            Ok(CliOpt::HttpsCert(Some(defaults::https_cert())))
         }
     } else {
-        warn!(
-            "certificate path not specified, using default: {:?}",
-            defaults::https_cert()
-        );
-        CliOpt::HttpsCert(defaults::https_cert())
+        Ok(CliOpt::HttpsCert(None))
     }
 }
 
-fn https_priv_key(matches: &clap::ArgMatches) -> CliOpt {
-    if let Some(v) = matches.value_of("directory") {
-        match PathBuf::from(v).canonicalize() {
-            Ok(v) => CliOpt::HttpsPrivKey(v),
-            Err(e) => {
-                error!(
-                    "the specified private key path doesn't exist: {}, using default: {:?}",
-                    e,
-                    defaults::https_priv_key()
-                );
-                CliOpt::HttpsPrivKey(defaults::https_priv_key())
+fn https_priv_key(matches: &clap::ArgMatches, https: &bool) -> Result<CliOpt, CliError> {
+    if *https {
+        if let Some(v) = matches.value_of("https-key") {
+            match PathBuf::from(v).canonicalize() {
+                Ok(v) => Ok(CliOpt::HttpsPrivKey(Some(v))),
+                Err(e) => {
+                    error!("the specified private key path doesn't exist: {}", e);
+                    Err(CliError::Parse(e.to_string()))
+                }
             }
+        } else {
+            warn!(
+                "private key path not specified, using default: {:?}",
+                defaults::https_priv_key()
+            );
+            Ok(CliOpt::HttpsPrivKey(Some(defaults::https_priv_key())))
         }
     } else {
-        warn!(
-            "private key path not specified, using default: {:?}",
-            defaults::https_priv_key()
-        );
-        CliOpt::HttpsPrivKey(defaults::https_priv_key())
+        Ok(CliOpt::HttpsPrivKey(None))
     }
 }

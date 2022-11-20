@@ -1,4 +1,5 @@
 pub mod defaults;
+pub mod err;
 pub mod parser;
 pub mod runner;
 
@@ -19,8 +20,8 @@ pub enum CliOpt {
     ShowTimestamp(bool),
     ShowLoglevel(bool),
     Https(bool),
-    HttpsCert(PathBuf),
-    HttpsPrivKey(PathBuf),
+    HttpsCert(Option<PathBuf>),
+    HttpsPrivKey(Option<PathBuf>),
 }
 
 pub trait Build<T, V, E>

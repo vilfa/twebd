@@ -28,7 +28,7 @@ impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
         server_root_builder
     }
     fn build(&self) -> Result<PathBuf, ServerRootError> {
-        Ok(self.root.to_path_buf())
+        Ok(self.root.to_owned())
     }
 }
 

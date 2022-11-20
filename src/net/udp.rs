@@ -37,22 +37,19 @@ impl UdpSocketIo for UdpSocket {
             }
             Err(e) => {
                 self.remote_address = None;
-                Err(SocketError::SocketIoError(e))
+                Err(SocketError::Io(e))
             }
         }
     }
     fn read(&self, buf: &mut [u8]) -> Result<(usize, SocketAddr), SocketError> {
         self.socket
             .recv_from(buf)
-            .or_else(|e| Err(SocketError::SocketIoError(e)))
+            .or_else(|e| Err(SocketError::Io(e)))
     }
     fn write(&self, buf: &[u8]) -> Result<usize, SocketError> {
         match self.remote_address {
-            Some(_) => self
-                .socket
-                .send(buf)
-                .or_else(|e| Err(SocketError::SocketIoError(e))),
-            None => Err(SocketError::SocketNotConnected),
+            Some(_) => self.socket.send(buf).or_else(|e| Err(SocketError::Io(e))),
+            None => Err(SocketError::NotConnected),
         }
     }
 }

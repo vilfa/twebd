@@ -24,7 +24,7 @@ impl Parse<Vec<String>, Self, E> for HttpHeader {
                     let _ = headers.insert(key, value);
                 }
                 _ => {
-                    return Err(HttpParseError::HttpHeaderParseErr(format!(
+                    return Err(HttpParseError::HttpHeader(format!(
                         "invalid http header: {:?}",
                         header
                     )))
@@ -44,7 +44,7 @@ impl Parse<Vec<String>, Self, E> for HttpLine {
                 uri: PathBuf::from(&v[1]),
                 version: HttpVersion::parse(&v[2])?,
             }),
-            _ => Err(HttpParseError::HttpRequestLineParseErr(format!(
+            _ => Err(HttpParseError::HttpRequestLine(format!(
                 "unknown error parsing http request line: {:?}",
                 &v
             ))),
@@ -64,7 +64,7 @@ impl Parse<&String, Self, E> for HttpMethod {
             "TRACE" => Ok(HttpMethod::Trace),
             "CONNECT" => Ok(HttpMethod::Connect),
             "PATCH" => Ok(HttpMethod::Patch),
-            _ => Err(E::HttpMethodParseErr(format!(
+            _ => Err(E::HttpMethod(format!(
                 "expected a valid http method, got: {}",
                 v
             ))),
@@ -78,7 +78,7 @@ impl Parse<&String, Self, E> for HttpVersion {
             "HTTP/1.0" => Ok(HttpVersion::Http11),
             "HTTP/1.1" => Ok(HttpVersion::Http11),
             "HTTP/2.0" => Ok(HttpVersion::Http20),
-            _ => Err(HttpParseError::HttpMethodParseErr(format!(
+            _ => Err(HttpParseError::HttpMethod(format!(
                 "expected a valid http version, got: {}",
                 v
             ))),

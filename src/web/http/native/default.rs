@@ -1,6 +1,6 @@
 use crate::{
-    app::{APP_NAME, APP_VERSION},
     web::{HttpBody, HttpHeader, HttpResponse, HttpStatus, HttpVersion},
+    APP_NAME, APP_VERSION,
 };
 use chrono::prelude::*;
 use std::collections::HashMap;

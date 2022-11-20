@@ -23,8 +23,8 @@ impl Build<Self, rustls::ServerConfig, TlsConfigError> for TlsConfigBuilder {
         for opt in opts {
             match opt {
                 CliOpt::Https(v) => tls_config_builder.https_enabled = v,
-                CliOpt::HttpsCert(v) => tls_config_builder.cert_path = v,
-                CliOpt::HttpsPrivKey(v) => tls_config_builder.priv_key_path = v,
+                CliOpt::HttpsCert(v) => tls_config_builder.cert_path = v.unwrap(),
+                CliOpt::HttpsPrivKey(v) => tls_config_builder.priv_key_path = v.unwrap(),
                 cli_opt => tls_config_builder.add_other(cli_opt.to_owned()),
             }
         }
@@ -66,16 +66,21 @@ impl Default for TlsConfigBuilder {
 
 fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
     trace!("loading private key");
-    let handle = std::fs::File::open(path)?;
+    if !path.exists() {
+        return Err(TlsConfigError::UnresolvablePath(
+            path.to_str().unwrap().to_string(),
+        ));
+    }
+    let handle = std::fs::File::open(path.canonicalize().unwrap())?;
     let mut buf_reader = std::io::BufReader::new(handle);
     match rustls_pemfile::pkcs8_private_keys(&mut buf_reader).map_err(|e| {
-        TlsConfigError::PrivateKeyError(format!("failed to load private key: {:?}: {:?}", path, e,))
+        TlsConfigError::PrivateKey(format!("failed to load private key: {:?}: {:?}", path, e,))
     }) {
         Ok(priv_keys) => {
             if priv_keys.len() == 1 {
                 Ok(rustls::PrivateKey(priv_keys[0].to_vec()))
             } else {
-                Err(TlsConfigError::PrivateKeyError(format!(
+                Err(TlsConfigError::PrivateKey(format!(
                     "expected exactly one private key, got: {}",
                     priv_keys.len()
                 )))
@@ -87,7 +92,12 @@ fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
 
 fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError> {
     trace!("loading certificate");
-    let handle = std::fs::File::open(path)?;
+    if !path.exists() {
+        return Err(TlsConfigError::UnresolvablePath(
+            path.to_str().unwrap().to_string(),
+        ));
+    }
+    let handle = std::fs::File::open(path.canonicalize().unwrap())?;
     let mut buf_reader = std::io::BufReader::new(handle);
 
     match rustls_pemfile::certs(&mut buf_reader) {
@@ -95,7 +105,7 @@ fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError>
             .iter()
             .map(|cert| rustls::Certificate(cert.to_vec()))
             .collect::<Vec<rustls::Certificate>>()),
-        Err(e) => Err(TlsConfigError::CertificateError(format!(
+        Err(e) => Err(TlsConfigError::Certificate(format!(
             "failed to load certificate or chain: {:?}: {:?}",
             path, e
         ))),

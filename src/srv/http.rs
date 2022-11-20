@@ -41,10 +41,7 @@ impl Server<Self, ServerError> for HttpServer {
         }
     }
     fn listen(&mut self) {
-        info!(
-            "listening for http connections on socket: `{:?}",
-            &self.socket
-        );
+        info!("listening for connections on socket {:?}", &self.socket);
         for stream in self.socket.incoming() {
             let mut stream = stream.unwrap();
             let root = self.root.clone();
@@ -72,7 +69,7 @@ fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerE
         }
         Err(e) => {
             error!("error reading data from session: {:?}", e);
-            return Err(ServerError::SessionIoError(e));
+            return Err(ServerError::SessionIo(e));
         }
     };
     let request = request(&mut buf)?;

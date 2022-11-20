@@ -77,8 +77,11 @@ impl Server<Self, ServerError> for HttpsServer {
         }
     }
     fn listen(&mut self) {
+        info!(
+            "listening for connections on socket {:?}",
+            self.socket.socket().local_addr().unwrap()
+        );
         let mut events = mio::Events::with_capacity(SERVER_QUEUE_SIZE);
-
         loop {
             match self.poll.poll(&mut events, None) {
                 Ok(_) => {
@@ -124,7 +127,7 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
                 Err(e) => {
                     error!("error accepting connection: {:?}", e);
-                    return Err(ServerError::SessionIoError(e));
+                    return Err(ServerError::SessionIo(e));
                 }
             }
         }

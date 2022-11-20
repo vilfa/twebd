@@ -1,12 +1,11 @@
 use crate::{
-    app,
     cli::{defaults, parser},
-    srv::{HttpServer, HttpsServer, Server},
+    srv::{log::init_logger, HttpServer, HttpsServer, Server},
 };
 use log::error;
 
 pub fn run() {
-    let _ = app::init_logger(defaults::loglevel());
+    let _ = init_logger(defaults::loglevel());
     let matches = parser::parse_args();
     match parser::parse_matches(&matches) {
         Ok(cli_config) => {

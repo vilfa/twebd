@@ -1,5 +1,5 @@
 use crate::srv::ConnectionError;
-use log::{debug, error, trace};
+use log::trace;
 use std::io::{Read, Write};
 
 pub struct Connection {
@@ -67,63 +67,47 @@ impl Connection {
     pub fn read_tls(&mut self) -> Result<usize, ConnectionError> {
         match self.tls_conn.read_tls(&mut self.socket) {
             Ok(size) => {
-                debug!("read tls from socket: {} bytes", size);
+                trace!("read tls from socket: {} bytes", size);
                 Ok(size)
             }
-            Err(e) => {
-                error!("error reading from socket: {:?}", e);
-                Err(ConnectionError::TlsRead(e))
-            }
+            Err(e) => Err(ConnectionError::TlsRead(e)),
         }
     }
     pub fn process_tls(&mut self) -> Result<rustls::IoState, ConnectionError> {
         match self.tls_conn.process_new_packets() {
             Ok(v) => {
-                debug!("successfully processed new tls packets");
-                trace!("tls packet iostate: {:?}", &v);
+                trace!("successfully processed new tls packets");
                 Ok(v)
             }
-            Err(e) => {
-                trace!("error processing new tls packets: {:?}", e);
-                Err(ConnectionError::TlsProcess(e))
-            }
+            Err(e) => Err(ConnectionError::TlsProcess(e)),
         }
     }
     pub fn read_plain(&mut self, size: usize) -> Result<Vec<u8>, ConnectionError> {
         let mut buf: Vec<u8> = vec![0; size];
         match self.tls_conn.reader().read(&mut buf) {
             Ok(size) => {
-                debug!("read plaintext from session: {} bytes", size);
+                trace!("read plaintext from session: {} bytes", size);
                 Ok(buf)
             }
-            Err(e) => {
-                error!("error reading plaintext from session: {:?}", e);
-                Err(ConnectionError::PlainRead(e))
-            }
+            Err(e) => Err(ConnectionError::PlainRead(e)),
         }
     }
     pub fn write_plain(&mut self, buf: Vec<u8>) -> Result<usize, ConnectionError> {
         match self.tls_conn.writer().write(&buf) {
             Ok(size) => {
-                debug!("write plaintext to session: {} bytes", size);
+                trace!("write plaintext to session: {} bytes", size);
                 Ok(size)
             }
-            Err(e) => {
-                error!("error writing plaintext to session {:?}", e);
-                Err(ConnectionError::PlainWrite(e))
-            }
+            Err(e) => Err(ConnectionError::PlainWrite(e)),
         }
     }
     pub fn write_tls(&mut self) -> Result<usize, ConnectionError> {
         match self.tls_conn.write_tls(&mut self.socket) {
             Ok(size) => {
-                debug!("write tls to socket: {} bytes", size);
+                trace!("write tls to socket: {} bytes", size);
                 Ok(size)
             }
-            Err(e) => {
-                error!("error writing tls to socket: {:?}", e);
-                Err(ConnectionError::TlsWrite(e))
-            }
+            Err(e) => Err(ConnectionError::TlsWrite(e)),
         }
     }
 }

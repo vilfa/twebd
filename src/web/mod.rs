@@ -1,6 +1,8 @@
 pub mod http;
 pub mod https;
 
+// TODO: Return default HTTP body responses for any status code.
+
 pub use http::{
     consts,
     err::{HttpParseError, HttpResponseError},
@@ -12,7 +14,4 @@ pub use http::{
     response::get,
     HandleRequest, HandleResponse, HttpHandler,
 };
-pub use https::{
-    err::TlsConfigError,
-    tls::{TlsConfig, TlsConfigBuilder},
-};
+pub use https::{err::TlsConfigError, tls::TlsConfigBuilder};

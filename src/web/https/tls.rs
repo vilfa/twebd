@@ -2,7 +2,7 @@ use crate::{
     cli::{Build, CliOpt, Other},
     web::TlsConfigError,
 };
-use log::trace;
+use log::{debug, trace};
 use std::{path::PathBuf, result::Result};
 
 #[derive(Debug)]
@@ -11,10 +11,6 @@ pub struct TlsConfigBuilder {
     cert_path: PathBuf,
     priv_key_path: PathBuf,
     _other: Vec<CliOpt>,
-}
-
-pub struct TlsConfig {
-    pub server_config: rustls::ServerConfig,
 }
 
 impl Build<Self, rustls::ServerConfig, TlsConfigError> for TlsConfigBuilder {
@@ -65,7 +61,6 @@ impl Default for TlsConfigBuilder {
 }
 
 fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
-    trace!("loading private key");
     if !path.exists() {
         return Err(TlsConfigError::UnresolvablePath(
             path.to_str().unwrap().to_string(),
@@ -78,6 +73,7 @@ fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
     }) {
         Ok(priv_keys) => {
             if priv_keys.len() == 1 {
+                debug!("loaded private key");
                 Ok(rustls::PrivateKey(priv_keys[0].to_vec()))
             } else {
                 Err(TlsConfigError::PrivateKey(format!(
@@ -91,7 +87,6 @@ fn load_priv_key(path: &PathBuf) -> Result<rustls::PrivateKey, TlsConfigError> {
 }
 
 fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError> {
-    trace!("loading certificate");
     if !path.exists() {
         return Err(TlsConfigError::UnresolvablePath(
             path.to_str().unwrap().to_string(),
@@ -101,10 +96,12 @@ fn load_cert(path: &PathBuf) -> Result<Vec<rustls::Certificate>, TlsConfigError>
     let mut buf_reader = std::io::BufReader::new(handle);
 
     match rustls_pemfile::certs(&mut buf_reader) {
-        Ok(v) => Ok(v
-            .iter()
-            .map(|cert| rustls::Certificate(cert.to_vec()))
-            .collect::<Vec<rustls::Certificate>>()),
+        Ok(v) => {
+            debug!("loaded certificate(s)");
+            Ok(v.iter()
+                .map(|cert| rustls::Certificate(cert.to_vec()))
+                .collect::<Vec<rustls::Certificate>>())
+        }
         Err(e) => Err(TlsConfigError::Certificate(format!(
             "failed to load certificate or chain: {:?}: {:?}",
             path, e

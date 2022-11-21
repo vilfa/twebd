@@ -7,17 +7,27 @@ use log::{error, warn};
 use std::{net::IpAddr, path::PathBuf, result::Result, str::FromStr};
 
 pub struct CliConfig {
-    log_level: log::LevelFilter,
-    https: bool,
     cli_opts: Vec<CliOpt>,
 }
 
 impl CliConfig {
     pub fn log_level(&self) -> log::LevelFilter {
-        self.log_level
+        for opt in &self.cli_opts {
+            match opt {
+                CliOpt::Verbosity(v) => return *v,
+                _ => {}
+            }
+        }
+        log::LevelFilter::Info
     }
     pub fn https(&self) -> bool {
-        self.https
+        for opt in &self.cli_opts {
+            match opt {
+                CliOpt::Https(v) => return *v,
+                _ => {}
+            }
+        }
+        false
     }
     pub fn cli_opts(&self) -> Vec<CliOpt> {
         self.cli_opts.to_vec()
@@ -115,32 +125,22 @@ pub fn parse_args<'a>() -> clap::ArgMatches<'a> {
 }
 
 pub fn parse_matches(matches: &clap::ArgMatches) -> Result<CliConfig, CliError> {
-    let https = if let CliOpt::Https(v) = https(matches)? {
-        v
-    } else {
-        defaults::https()
-    };
-
-    let log_level = if let CliOpt::Verbosity(v) = loglevel(matches)? {
-        v
-    } else {
-        defaults::loglevel()
-    };
-
     let cli_opts = vec![
+        loglevel(matches)?,
+        https(matches)?,
         address(matches)?,
         port(matches)?,
         directory(matches)?,
         threads(matches)?,
-        https_cert(matches, &https)?,
-        https_priv_key(matches, &https)?,
     ];
 
-    Ok(CliConfig {
-        log_level,
-        https,
-        cli_opts,
-    })
+    let mut cli_config = CliConfig { cli_opts };
+
+    let https = cli_config.https();
+    cli_config.cli_opts.push(https_cert(matches, &https)?);
+    cli_config.cli_opts.push(https_priv_key(matches, &https)?);
+
+    Ok(cli_config)
 }
 
 fn address(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {

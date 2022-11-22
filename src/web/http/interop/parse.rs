@@ -1,4 +1,4 @@
-use crate::web::http::consts;
+use crate::web::http::delim;
 use crate::web::{HttpBody, HttpHeader, HttpLine, HttpMethod, HttpParseError, HttpVersion, Parse};
 use std::{collections::HashMap, path::PathBuf, result::Result};
 
@@ -15,7 +15,7 @@ impl Parse<Vec<String>, Self, E> for HttpHeader {
         let mut headers = HashMap::new();
         for token in v {
             let mut header = token
-                .split(consts::HDSP)
+                .split(delim::CLSP)
                 .map(|v| v.trim().to_string())
                 .collect::<Vec<String>>();
             match header.len() {

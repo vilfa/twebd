@@ -1,13 +1,13 @@
 use crate::{
-    cli::{defaults, parser},
+    cli::{default, parse},
     srv::{log::init_logger, HttpServer, HttpsServer, Server},
 };
 use log::error;
 
 pub fn run() {
-    let _ = init_logger(defaults::loglevel());
-    let matches = parser::parse_args();
-    match parser::parse_matches(&matches) {
+    let _ = init_logger(default::loglevel());
+    let matches = parse::parse_args();
+    match parse::parse_matches(&matches) {
         Ok(cli_config) => {
             log::set_max_level(cli_config.log_level());
             if cli_config.https() {

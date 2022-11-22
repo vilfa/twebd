@@ -1,10 +1,10 @@
-pub mod defaults;
+pub mod default;
 pub mod err;
-pub mod parser;
-pub mod runner;
+pub mod parse;
+pub mod run;
 
-pub use parser::{parse_args, parse_matches, CliConfig};
-pub use runner::run;
+pub use parse::{parse_args, parse_matches, CliConfig};
+pub use run::run;
 
 use crate::net::DataProtocol;
 use std::{net::IpAddr, path::PathBuf};

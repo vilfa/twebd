@@ -1,5 +1,5 @@
 use crate::{
-    cli::{defaults, Build, CliOpt, Other},
+    cli::{default, Build, CliOpt, Other},
     syn::{Message, ThreadPoolError, Tx, Worker},
 };
 use log::{debug, trace};
@@ -92,7 +92,7 @@ impl Other for ThreadPoolBuilder {
 impl Default for ThreadPoolBuilder {
     fn default() -> Self {
         ThreadPoolBuilder {
-            pool_size: defaults::threads(),
+            pool_size: default::threads(),
             _other: Vec::new(),
         }
     }

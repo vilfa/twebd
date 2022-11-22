@@ -4,7 +4,7 @@ pub mod https;
 // TODO: Return default HTTP body responses for any status code.
 
 pub use http::{
-    consts,
+    delim,
     err::{HttpParseError, HttpResponseError},
     interop::{buffer_to_string, string_into_tokens, Parse, ToBuf, TokenIter},
     native::{

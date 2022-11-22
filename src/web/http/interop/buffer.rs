@@ -1,5 +1,5 @@
 use crate::web::http::{
-    consts,
+    delim,
     interop::ToBuf,
     native::{
         HttpBody, HttpHeader, HttpLine, HttpMethod, HttpResponse, HttpResponseLine, HttpStatus,
@@ -19,7 +19,7 @@ impl ToBuf for HttpHeader {
         for (key, value) in self.headers.iter() {
             buf.push_str(&format!("{}: {}\r\n", &key, &value));
         }
-        buf.push_str(consts::CRLF);
+        buf.push_str(delim::CRLF);
         buf.into_bytes()
     }
 }
@@ -28,11 +28,11 @@ impl ToBuf for HttpLine {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.append(&mut self.method.to_buf());
-        buf.append(&mut consts::WSPC.as_bytes().to_vec());
+        buf.append(&mut delim::WSPC.as_bytes().to_vec());
         buf.append(&mut self.uri.to_str().unwrap().as_bytes().to_vec());
-        buf.append(&mut consts::WSPC.as_bytes().to_vec());
+        buf.append(&mut delim::WSPC.as_bytes().to_vec());
         buf.append(&mut self.version.to_buf());
-        buf.append(&mut consts::CRLF.as_bytes().to_vec());
+        buf.append(&mut delim::CRLF.as_bytes().to_vec());
         buf
     }
 }
@@ -72,9 +72,9 @@ impl ToBuf for HttpResponseLine {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.append(&mut self.version.to_buf());
-        buf.append(&mut consts::WSPC.as_bytes().to_vec());
+        buf.append(&mut delim::WSPC.as_bytes().to_vec());
         buf.append(&mut self.status.to_buf());
-        buf.append(&mut consts::CRLF.as_bytes().to_vec());
+        buf.append(&mut delim::CRLF.as_bytes().to_vec());
         buf
     }
 }

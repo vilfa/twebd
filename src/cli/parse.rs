@@ -1,5 +1,5 @@
 use crate::{
-    cli::{defaults, err::CliError, CliOpt},
+    cli::{default, err::CliError, CliOpt},
     APP_AUTHOR, APP_DESCRIPTION, APP_NAME, APP_VERSION,
 };
 use clap::{App, Arg};
@@ -155,9 +155,9 @@ fn address(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     } else {
         warn!(
             "address not specified, using default: {:?}",
-            defaults::address()
+            default::address()
         );
-        Ok(CliOpt::Address(defaults::address()))
+        Ok(CliOpt::Address(default::address()))
     }
 }
 
@@ -171,8 +171,8 @@ fn port(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
             }
         }
     } else {
-        warn!("port not specified, using default: {}", defaults::port());
-        Ok(CliOpt::Port(defaults::port()))
+        warn!("port not specified, using default: {}", default::port());
+        Ok(CliOpt::Port(default::port()))
     }
 }
 
@@ -188,9 +188,9 @@ fn directory(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     } else {
         warn!(
             "directory not specified, using default: {:?}",
-            defaults::directory()
+            default::directory()
         );
-        Ok(CliOpt::Directory(defaults::directory()))
+        Ok(CliOpt::Directory(default::directory()))
     }
 }
 
@@ -206,9 +206,9 @@ fn loglevel(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     } else {
         warn!(
             "log level not specified, using default: {}",
-            defaults::loglevel()
+            default::loglevel()
         );
-        Ok(CliOpt::Verbosity(defaults::loglevel()))
+        Ok(CliOpt::Verbosity(default::loglevel()))
     }
 }
 
@@ -216,14 +216,14 @@ fn threads(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     if let Some(v) = matches.value_of("threads") {
         match v.parse::<usize>() {
             Ok(v) => {
-                if v > defaults::threads_max() {
+                if v > default::threads_max() {
                     warn!(
                         "max thread count is {}, using max. got: {}",
-                        defaults::threads_max(),
+                        default::threads_max(),
                         v
                     );
                 }
-                Ok(CliOpt::Threads(std::cmp::min(v, defaults::threads_max())))
+                Ok(CliOpt::Threads(std::cmp::min(v, default::threads_max())))
             }
             Err(e) => {
                 error!("failed to parse thread count: {}", e);
@@ -233,9 +233,9 @@ fn threads(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     } else {
         warn!(
             "thread count not specified, using default: {}",
-            defaults::threads()
+            default::threads()
         );
-        Ok(CliOpt::Threads(defaults::threads()))
+        Ok(CliOpt::Threads(default::threads()))
     }
 }
 
@@ -245,9 +245,9 @@ fn https(matches: &clap::ArgMatches) -> Result<CliOpt, CliError> {
     } else {
         warn!(
             "https option not specified, using default: {}",
-            defaults::https()
+            default::https()
         );
-        Ok(CliOpt::Https(defaults::https()))
+        Ok(CliOpt::Https(default::https()))
     }
 }
 
@@ -264,9 +264,9 @@ fn https_cert(matches: &clap::ArgMatches, https: &bool) -> Result<CliOpt, CliErr
         } else {
             warn!(
                 "certificate path not specified, using default: {:?}",
-                defaults::https_cert()
+                default::https_cert()
             );
-            Ok(CliOpt::HttpsCert(Some(defaults::https_cert())))
+            Ok(CliOpt::HttpsCert(Some(default::https_cert())))
         }
     } else {
         Ok(CliOpt::HttpsCert(None))
@@ -286,9 +286,9 @@ fn https_priv_key(matches: &clap::ArgMatches, https: &bool) -> Result<CliOpt, Cl
         } else {
             warn!(
                 "private key path not specified, using default: {:?}",
-                defaults::https_priv_key()
+                default::https_priv_key()
             );
-            Ok(CliOpt::HttpsPrivKey(Some(defaults::https_priv_key())))
+            Ok(CliOpt::HttpsPrivKey(Some(default::https_priv_key())))
         }
     } else {
         Ok(CliOpt::HttpsPrivKey(None))

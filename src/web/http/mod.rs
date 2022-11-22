@@ -1,4 +1,4 @@
-pub mod consts;
+pub mod delim;
 pub mod err;
 pub mod interop;
 pub mod native;
@@ -15,7 +15,7 @@ pub struct HttpHandler<T> {
 impl<T> HttpHandler<T> {
     pub fn new() -> Self {
         HttpHandler {
-            handler_type: PhantomData,
+            handler_type: PhantomData::<T>,
         }
     }
 }

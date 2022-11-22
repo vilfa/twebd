@@ -1,5 +1,5 @@
 use crate::{
-    cli::{Build, CliOpt, Other},
+    cli::{Builder, CliOpt},
     web::TlsConfigError,
 };
 use log::{debug, trace};
@@ -13,7 +13,7 @@ pub struct TlsConfigBuilder {
     _other: Vec<CliOpt>,
 }
 
-impl Build<Self, rustls::ServerConfig, TlsConfigError> for TlsConfigBuilder {
+impl Builder<Self, rustls::ServerConfig, TlsConfigError> for TlsConfigBuilder {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut tls_config_builder = Self::default();
         for opt in opts {
@@ -38,9 +38,6 @@ impl Build<Self, rustls::ServerConfig, TlsConfigError> for TlsConfigBuilder {
         trace!("constructed server tls config");
         Ok(server_config)
     }
-}
-
-impl Other for TlsConfigBuilder {
     fn add_other(&mut self, o: CliOpt) {
         self._other.push(o);
     }

@@ -1,17 +1,17 @@
 use crate::{
-    cli::{Build, CliOpt, Other},
+    cli::{Builder, CliOpt},
     net::{SocketBuilder, TcpSocket},
     srv::{
-        Connection, Server, ServerError, ServerRootBuilder, ServerSecure, SERVER_QUEUE_SIZE,
-        SERVER_SOCKET_TOKEN,
+        Connection, SecureConnectionHandler, Server, ServerError, ServerRootBuilder,
+        SERVER_QUEUE_SIZE, SERVER_SOCKET_TOKEN,
     },
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
-        buffer_to_string, HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse,
-        TlsConfigBuilder, ToBuf,
+        HttpAcceptor, HttpAdapter, HttpRequest, HttpResponder, HttpResponse, TlsConfigBuilder,
+        ToBuffer,
     },
 };
-use log::{debug, error, info, trace};
+use log::{debug, error, info};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 pub struct HttpsServer {
@@ -76,6 +76,15 @@ impl Server<Self, ServerError> for HttpsServer {
             tls_config: Arc::new(tls_config),
         }
     }
+    fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
+        HttpAdapter::<HttpRequest>::accept(buf).map_err(|e| ServerError::from(e))
+    }
+    fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
+        HttpAdapter::<HttpResponse>::respond(req, root)
+    }
+}
+
+impl SecureConnectionHandler<ServerError> for HttpsServer {
     fn listen(&mut self) {
         info!(
             "listening for connections on socket {:?}",
@@ -104,9 +113,6 @@ impl Server<Self, ServerError> for HttpsServer {
             }
         }
     }
-}
-
-impl ServerSecure<Self, ServerError> for HttpsServer {
     fn accept(&mut self) -> Result<(), ServerError> {
         loop {
             match self.socket.accept() {
@@ -135,7 +141,7 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
     fn event(&mut self, event: &mio::event::Event) -> Result<(), ServerError> {
         let token = event.token();
         if self.connections.contains_key(&token) {
-            match handle(
+            match Self::handle(
                 event,
                 self.connections.get_mut(&token).unwrap(),
                 &self.poll,
@@ -151,51 +157,36 @@ impl ServerSecure<Self, ServerError> for HttpsServer {
         }
         Ok(())
     }
-}
-
-fn handle(
-    event: &mio::event::Event,
-    conn: &mut Connection,
-    poll: &mio::Poll,
-    root: &PathBuf,
-) -> Result<(), ServerError> {
-    if event.is_readable() {
-        conn.read_tls()?;
-        if let Ok(io_state) = conn.process_tls() {
-            if io_state.plaintext_bytes_to_read() > 0 {
-                let mut buf = conn.read_plain(io_state.plaintext_bytes_to_read())?;
-                let request = request(&mut buf)?;
-                let response = response(&request, &root);
-                conn.write_plain(response.to_buf())?;
+    fn handle(
+        event: &mio::event::Event,
+        conn: &mut Connection,
+        poll: &mio::Poll,
+        root: &PathBuf,
+    ) -> Result<(), ServerError> {
+        if event.is_readable() {
+            conn.read_tls()?;
+            if let Ok(io_state) = conn.process_tls() {
+                if io_state.plaintext_bytes_to_read() > 0 {
+                    let mut buf = conn.read_plain(io_state.plaintext_bytes_to_read())?;
+                    let request = Self::request(&mut buf)?;
+                    let response = Self::response(&request, &root);
+                    conn.write_plain(response.to_buf())?;
+                }
             }
         }
+
+        if event.is_writable() {
+            conn.write_tls()?;
+        }
+
+        // TODO: Browser doesn't receive the HTTP body when NotFound is encountered.
+
+        if conn.is_closing() {
+            conn.shutdown(std::net::Shutdown::Both, poll.registry());
+        } else {
+            conn.reregister(poll.registry());
+        }
+
+        Ok(())
     }
-
-    if event.is_writable() {
-        conn.write_tls()?;
-    }
-
-    // TODO: Browser doesn't receive the HTTP body when NotFound is encountered.
-
-    if conn.is_closing() {
-        conn.shutdown(std::net::Shutdown::Both, poll.registry());
-    } else {
-        conn.reregister(poll.registry());
-    }
-
-    Ok(())
-}
-
-fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-    trace!(
-        "received buffer: as string: {:?} {:?}",
-        buf,
-        buffer_to_string(buf)?
-    );
-    HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
-}
-
-fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-    trace!("parsed request: {:?}", req);
-    HttpHandler::<HttpResponse>::handle(req, root)
 }

@@ -1,14 +1,10 @@
-pub mod get;
-
 use crate::web::{
-    get::get, HandleResponse, HttpHandler, HttpMethod, HttpRequest, HttpResponse, HttpStatus,
+    handle::get, HttpAdapter, HttpMethod, HttpRequest, HttpResponder, HttpResponse, HttpStatus,
 };
-use log::trace;
 use std::path::PathBuf;
 
-impl HandleResponse<HttpResponse> for HttpHandler<HttpResponse> {
-    fn handle(request: &HttpRequest, srv_root: &PathBuf) -> HttpResponse {
-        trace!("called handle response");
+impl HttpResponder<HttpResponse> for HttpAdapter<HttpResponse> {
+    fn respond(request: &HttpRequest, srv_root: &PathBuf) -> HttpResponse {
         match request.method {
             HttpMethod::Get => get(&request.uri, srv_root),
             _ => {

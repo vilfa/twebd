@@ -1,5 +1,5 @@
 use crate::{
-    cli::{Build, CliOpt, Other},
+    cli::{Builder, CliOpt},
     srv::ServerRootError,
 };
 use log::trace;
@@ -11,7 +11,7 @@ pub struct ServerRootBuilder {
     _other: Vec<CliOpt>,
 }
 
-impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
+impl Builder<Self, PathBuf, ServerRootError> for ServerRootBuilder {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut server_root_builder = Self::default();
         for opt in opts {
@@ -30,9 +30,6 @@ impl Build<Self, PathBuf, ServerRootError> for ServerRootBuilder {
     fn build(&self) -> Result<PathBuf, ServerRootError> {
         Ok(self.root.to_owned())
     }
-}
-
-impl Other for ServerRootBuilder {
     fn add_other(&mut self, o: CliOpt) {
         self._other.push(o);
     }

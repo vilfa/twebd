@@ -1,14 +1,11 @@
 use crate::{
-    cli::{Build, CliOpt, Other},
+    cli::{Builder, CliOpt},
     net::{SimpleTcpSocket, SocketBuilder},
-    srv::{Server, ServerError, ServerRootBuilder},
+    srv::{ConnectionHandler, Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
-    web::{
-        buffer_to_string, HandleRequest, HandleResponse, HttpHandler, HttpRequest, HttpResponse,
-        ToBuf,
-    },
+    web::{HttpAcceptor, HttpAdapter, HttpRequest, HttpResponder, HttpResponse, ToBuffer},
 };
-use log::{debug, error, info, trace};
+use log::{debug, error, info};
 use std::{
     io::{BufRead, BufReader, Write},
     net::TcpStream,
@@ -24,7 +21,7 @@ pub struct HttpServer {
 
 impl Server<Self, ServerError> for HttpServer {
     fn new(opts: Vec<CliOpt>) -> Self {
-        info!("initializing http server with options: {:?}", &opts);
+        info!("initializing http server: {:?}", &opts);
 
         let socket_builder = SocketBuilder::<SimpleTcpSocket>::new(opts);
         let thread_pool_builder = ThreadPoolBuilder::new(socket_builder.other());
@@ -40,50 +37,48 @@ impl Server<Self, ServerError> for HttpServer {
             root: Arc::new(root),
         }
     }
+    fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
+        debug!("received {} byte buffer", buf.len());
+        HttpAdapter::<HttpRequest>::accept(buf).map_err(|e| ServerError::from(e))
+    }
+    fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
+        debug!("parsed request: {:?}", &req);
+        HttpAdapter::<HttpResponse>::respond(req, root)
+    }
+}
+
+impl ConnectionHandler<ServerError> for HttpServer {
     fn listen(&mut self) {
         info!("listening for connections on socket {:?}", &self.socket);
         for stream in self.socket.incoming() {
             let mut stream = stream.unwrap();
             let root = self.root.clone();
             self.threads.execute(move || {
-                info!("received tcp connection");
-                match handle(&mut stream, root) {
+                debug!("received tcp connection");
+                match Self::handle(&mut stream, root) {
                     Ok(buf) => {
                         let _ = stream.write(&buf);
                     }
                     Err(e) => {
-                        error!("error reading tcp stream: {:?}", e);
+                        error!("error while handling connection: {:?}", e);
                     }
                 }
             })
         }
     }
-}
-
-fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
-    trace!("received server session: {:?}", &stream);
-    let mut buf = match BufReader::new(stream).fill_buf() {
-        Ok(v) => {
-            debug!("read data from session: {} bytes", v.len());
-            v.to_vec()
-        }
-        Err(e) => {
-            error!("error reading data from session: {:?}", e);
-            return Err(ServerError::SessionIo(e));
-        }
-    };
-    let request = request(&mut buf)?;
-    let response = response(&request, &root);
-    Ok(response.to_buf())
-}
-
-fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-    trace!("received buffer: {:?}", &buf);
-    trace!("buffer as string: {:?}", buffer_to_string(&buf)?);
-    HttpHandler::<HttpRequest>::handle(buf).map_err(|e| ServerError::from(e))
-}
-
-fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-    trace!("parsed request: {:?}", &req);
-    HttpHandler::<HttpResponse>::handle(req, root)
+    fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, ServerError> {
+        let mut buf = match BufReader::new(stream).fill_buf() {
+            Ok(v) => {
+                debug!("read data from session: {} bytes", v.len());
+                v.to_vec()
+            }
+            Err(e) => {
+                error!("error reading data from session: {:?}", e);
+                return Err(ServerError::SessionIo(e));
+            }
+        };
+        let request = Self::request(&mut buf)?;
+        let response = Self::response(&request, &root);
+        Ok(response.to_buf())
+    }
 }

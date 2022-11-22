@@ -1,5 +1,5 @@
 use crate::{
-    cli::{default, Build, CliOpt, Other},
+    cli::{default, Builder, CliOpt},
     syn::{Message, ThreadPoolError, Tx, Worker},
 };
 use log::{debug, trace};
@@ -59,7 +59,7 @@ pub struct ThreadPoolBuilder {
     _other: Vec<CliOpt>,
 }
 
-impl Build<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
+impl Builder<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut thread_pool_builder = Self::default();
         for opt in opts {
@@ -78,9 +78,6 @@ impl Build<Self, ThreadPool, ThreadPoolError> for ThreadPoolBuilder {
     fn build(&self) -> Result<ThreadPool, ThreadPoolError> {
         Ok(ThreadPool::new(self.pool_size))
     }
-}
-
-impl Other for ThreadPoolBuilder {
     fn add_other(&mut self, o: CliOpt) {
         self._other.push(o);
     }

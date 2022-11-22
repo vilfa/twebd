@@ -24,7 +24,7 @@ pub enum CliOpt {
     HttpsPrivKey(Option<PathBuf>),
 }
 
-pub trait Build<T, V, E>
+pub trait Builder<T, V, E>
 where
     T: Sized,
     V: Sized,
@@ -32,9 +32,6 @@ where
 {
     fn new(opts: Vec<CliOpt>) -> T;
     fn build(&self) -> std::result::Result<V, E>;
-}
-
-pub trait Other {
     fn add_other(&mut self, o: CliOpt);
     fn other(&self) -> Vec<CliOpt>;
 }

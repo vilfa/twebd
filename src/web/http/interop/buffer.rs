@@ -1,19 +1,44 @@
-use crate::web::http::{
-    delim,
-    interop::ToBuf,
-    native::{
-        HttpBody, HttpHeader, HttpLine, HttpMethod, HttpResponse, HttpResponseLine, HttpStatus,
-        HttpVersion,
+use crate::web::{
+    http::{
+        delim,
+        interop::ToBuffer,
+        native::{
+            HttpBody, HttpHeader, HttpLine, HttpMethod, HttpResponse, HttpResponseLine, HttpStatus,
+            HttpVersion,
+        },
     },
+    HttpParseError,
 };
 
-impl ToBuf for HttpBody {
+pub type TokenIter<'a> = std::vec::IntoIter<&'a str>;
+
+pub fn stringify(buf: &[u8]) -> Result<String, HttpParseError> {
+    match std::str::from_utf8(buf) {
+        Ok(v) => match regex::Regex::new(" +") {
+            Ok(r) => {
+                let buf = r.replace_all(v.trim(), delim::WSPC).to_string();
+                Ok(buf)
+            }
+            Err(e) => Err(HttpParseError::Buffer(format!("{:?}", e))),
+        },
+        Err(e) => Err(HttpParseError::Buffer(format!("{:?}", e))),
+    }
+}
+
+pub fn tokenize_s(str: &String) -> TokenIter {
+    str.split(delim::CRLF)
+        .map(|v| v.trim())
+        .collect::<Vec<&str>>()
+        .into_iter()
+}
+
+impl ToBuffer for HttpBody {
     fn to_buf(&self) -> Vec<u8> {
         self.tokens.join("").into_bytes()
     }
 }
 
-impl ToBuf for HttpHeader {
+impl ToBuffer for HttpHeader {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = String::new();
         for (key, value) in self.headers.iter() {
@@ -24,7 +49,7 @@ impl ToBuf for HttpHeader {
     }
 }
 
-impl ToBuf for HttpLine {
+impl ToBuffer for HttpLine {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.append(&mut self.method.to_buf());
@@ -37,7 +62,7 @@ impl ToBuf for HttpLine {
     }
 }
 
-impl ToBuf for HttpMethod {
+impl ToBuffer for HttpMethod {
     fn to_buf(&self) -> Vec<u8> {
         match self {
             Self::Options => b"OPTIONS".to_vec(),
@@ -53,7 +78,7 @@ impl ToBuf for HttpMethod {
     }
 }
 
-impl ToBuf for HttpResponse {
+impl ToBuffer for HttpResponse {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = Vec::new();
         let bufs = vec![
@@ -68,7 +93,7 @@ impl ToBuf for HttpResponse {
     }
 }
 
-impl ToBuf for HttpResponseLine {
+impl ToBuffer for HttpResponseLine {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.append(&mut self.version.to_buf());
@@ -79,13 +104,13 @@ impl ToBuf for HttpResponseLine {
     }
 }
 
-impl ToBuf for HttpStatus {
+impl ToBuffer for HttpStatus {
     fn to_buf(&self) -> Vec<u8> {
         format!("{}", self).as_bytes().to_vec()
     }
 }
 
-impl ToBuf for HttpVersion {
+impl ToBuffer for HttpVersion {
     fn to_buf(&self) -> Vec<u8> {
         match self {
             Self::Http11 => b"HTTP/1.1".to_vec(),

@@ -1,5 +1,5 @@
 use crate::{
-    cli::{Build, CliOpt, Other},
+    cli::{Builder, CliOpt},
     net::{SimpleTcpSocket, SocketError, TcpSocket, UdpSocket},
 };
 use log::trace;
@@ -22,7 +22,7 @@ pub struct SocketBuilder<T> {
     socket_type: PhantomData<T>,
 }
 
-impl Build<Self, TcpSocket, SocketError> for SocketBuilder<TcpSocket> {
+impl Builder<Self, TcpSocket, SocketError> for SocketBuilder<TcpSocket> {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut socket_builder = Self::default();
         for opt in opts {
@@ -40,9 +40,15 @@ impl Build<Self, TcpSocket, SocketError> for SocketBuilder<TcpSocket> {
     fn build(&self) -> Result<TcpSocket, SocketError> {
         Ok(TcpSocket::new(self.address, self.port))
     }
+    fn add_other(&mut self, o: CliOpt) {
+        self._other.push(o);
+    }
+    fn other(&self) -> Vec<CliOpt> {
+        self._other.to_vec()
+    }
 }
 
-impl Build<Self, SimpleTcpSocket, SocketError> for SocketBuilder<SimpleTcpSocket> {
+impl Builder<Self, SimpleTcpSocket, SocketError> for SocketBuilder<SimpleTcpSocket> {
     fn new(opts: Vec<CliOpt>) -> Self {
         let mut socket_builder = Self::default();
         for opt in opts {
@@ -60,18 +66,6 @@ impl Build<Self, SimpleTcpSocket, SocketError> for SocketBuilder<SimpleTcpSocket
     fn build(&self) -> Result<SimpleTcpSocket, SocketError> {
         Ok(SimpleTcpSocket::new(self.address, self.port))
     }
-}
-
-impl Other for SocketBuilder<TcpSocket> {
-    fn add_other(&mut self, o: CliOpt) {
-        self._other.push(o);
-    }
-    fn other(&self) -> Vec<CliOpt> {
-        self._other.to_vec()
-    }
-}
-
-impl Other for SocketBuilder<SimpleTcpSocket> {
     fn add_other(&mut self, o: CliOpt) {
         self._other.push(o);
     }

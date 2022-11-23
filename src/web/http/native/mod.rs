@@ -131,3 +131,15 @@ impl HttpResponse {
             .insert(String::from("Content-Length"), format!("{}", v));
     }
 }
+
+impl From<HttpStatus> for HttpResponse {
+    fn from(status: HttpStatus) -> Self {
+        let mut resp = HttpResponse::default();
+        resp.status = status;
+        resp.body = HttpBody::from(format!("{}", status));
+        let len: usize = resp.body.tokens.iter().map(|v| v.bytes().len()).sum();
+        resp.content_type(String::from("text/html"));
+        resp.content_length(len);
+        resp
+    }
+}

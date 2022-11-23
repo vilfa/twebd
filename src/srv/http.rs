@@ -3,7 +3,7 @@ use crate::{
     net::{SimpleTcpSocket, SocketBuilder},
     srv::{ConnectionHandler, Server, ServerError, ServerRootBuilder},
     syn::{ThreadPool, ThreadPoolBuilder},
-    web::{HttpAcceptor, HttpAdapter, HttpRequest, HttpResponder, HttpResponse, ToBuffer},
+    web::{HttpAdapter, HttpReceiver, HttpRequest, HttpResponder, HttpResponse, ToBuffer},
 };
 use log::{debug, error, info};
 use std::{
@@ -39,11 +39,11 @@ impl Server<Self, ServerError> for HttpServer {
     }
     fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
         debug!("received {} byte buffer", buf.len());
-        HttpAdapter::<HttpRequest>::accept(buf).map_err(|e| ServerError::from(e))
+        HttpAdapter::receive(buf).map_err(|e| ServerError::from(e))
     }
     fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
         debug!("parsed request: {:?}", &req);
-        HttpAdapter::<HttpResponse>::respond(req, root)
+        HttpAdapter::respond(req, root)
     }
 }
 

@@ -38,6 +38,12 @@ impl ToBuffer for HttpBody {
     }
 }
 
+impl From<String> for HttpBody {
+    fn from(v: String) -> Self {
+        HttpBody { tokens: vec![v] }
+    }
+}
+
 impl ToBuffer for HttpHeader {
     fn to_buf(&self) -> Vec<u8> {
         let mut buf = String::new();

@@ -7,7 +7,7 @@ use crate::{
     },
     syn::{ThreadPool, ThreadPoolBuilder},
     web::{
-        HttpAcceptor, HttpAdapter, HttpRequest, HttpResponder, HttpResponse, TlsConfigBuilder,
+        HttpAdapter, HttpReceiver, HttpRequest, HttpResponder, HttpResponse, TlsConfigBuilder,
         ToBuffer,
     },
 };
@@ -77,10 +77,10 @@ impl Server<Self, ServerError> for HttpsServer {
         }
     }
     fn request(buf: &mut [u8]) -> Result<HttpRequest, ServerError> {
-        HttpAdapter::<HttpRequest>::accept(buf).map_err(|e| ServerError::from(e))
+        HttpAdapter::receive(buf).map_err(|e| ServerError::from(e))
     }
     fn response(req: &HttpRequest, root: &PathBuf) -> HttpResponse {
-        HttpAdapter::<HttpResponse>::respond(req, root)
+        HttpAdapter::respond(req, root)
     }
 }
 

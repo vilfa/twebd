@@ -3,26 +3,14 @@ pub mod response;
 
 use crate::web;
 
-use std::marker::PhantomData;
+pub struct HttpAdapter {}
 
-pub struct HttpAdapter<T> {
-    handler_type: PhantomData<T>,
-}
-
-impl<T> HttpAdapter<T> {
-    pub fn new() -> Self {
-        HttpAdapter {
-            handler_type: PhantomData::<T>,
-        }
-    }
-}
-
-pub trait HttpAcceptor<V, E>
+pub trait HttpReceiver<V, E>
 where
     V: Sized,
     E: Sized,
 {
-    fn accept(buf: &mut [u8]) -> Result<V, E>;
+    fn receive(buf: &mut [u8]) -> Result<V, E>;
 }
 
 pub trait HttpResponder<V>

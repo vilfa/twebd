@@ -12,10 +12,7 @@ pub fn get(uri: &PathBuf, srv_root: &PathBuf) -> HttpResponse {
         Ok(v) => v,
         Err(e) => {
             debug!("the requested resource could not be found: {:?}", e);
-            let mut response = HttpResponse::default();
-            response.status = HttpStatus::NotFound;
-            response.body = HttpBody::from(e);
-            return response;
+            return HttpResponse::from(HttpStatus::NotFound);
         }
     };
 
@@ -23,10 +20,7 @@ pub fn get(uri: &PathBuf, srv_root: &PathBuf) -> HttpResponse {
         Ok(v) => v,
         Err(e) => {
             debug!("failed to load the requested resource: {:?}", e);
-            let mut response = HttpResponse::default();
-            response.status = HttpStatus::InternalServerError;
-            response.body = HttpBody::from(e);
-            return response;
+            return HttpResponse::from(HttpStatus::InternalServerError);
         }
     };
 

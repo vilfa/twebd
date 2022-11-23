@@ -1,11 +1,11 @@
 use crate::web::{
-    http::delim, stringify, tokenize_s, HttpAcceptor, HttpAdapter, HttpBody, HttpHeader, HttpLine,
-    HttpParseError, HttpParser, HttpRequest,
+    http::delim, stringify, tokenize_s, HttpAdapter, HttpBody, HttpHeader, HttpLine,
+    HttpParseError, HttpParser, HttpReceiver, HttpRequest,
 };
 use std::result::Result;
 
-impl HttpAcceptor<HttpRequest, HttpParseError> for HttpAdapter<HttpRequest> {
-    fn accept(buf: &mut [u8]) -> Result<HttpRequest, HttpParseError> {
+impl HttpReceiver<HttpRequest, HttpParseError> for HttpAdapter {
+    fn receive(buf: &mut [u8]) -> Result<HttpRequest, HttpParseError> {
         let sbuf = stringify(buf)?;
         let mut tokens = tokenize_s(&sbuf);
 

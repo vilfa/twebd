@@ -24,6 +24,24 @@ pub enum CliOpt {
     HttpsPrivKey(Option<PathBuf>),
 }
 
+impl Default for CliOpt {
+    fn default() -> Self {
+        match Self {
+            CliOpt::Address(_) => todo!(),
+            CliOpt::Port(_) => todo!(),
+            CliOpt::Protocol(_) => todo!(),
+            CliOpt::Directory(_) => todo!(),
+            CliOpt::Verbosity(_) => todo!(),
+            CliOpt::Threads(_) => todo!(),
+            CliOpt::ShowTimestamp(_) => todo!(),
+            CliOpt::ShowLoglevel(_) => todo!(),
+            CliOpt::Https(_) => todo!(),
+            CliOpt::HttpsCert(_) => todo!(),
+            CliOpt::HttpsPrivKey(_) => todo!(),
+        }
+    }
+}
+
 pub trait Builder<T, V, E>
 where
     T: Sized,

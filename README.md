@@ -27,7 +27,7 @@ $ cargo r -- [FLAGS] [OPTIONS]
 
 ```
 USAGE:
-    twebd.exe [FLAGS] [OPTIONS]
+    twebd [FLAGS] [OPTIONS]
 
 FLAGS:
     -h, --help
@@ -57,10 +57,10 @@ OPTIONS:
             Sets the server logging verbosity [possible values: error, warn, info, debug, trace]
 
     -p, --port <PORT>
-            Sets the server port number [possible values: 1..65535]
+            Sets the server port number [possible values: 1, .., 65535]
 
     -t, --threads <N_THREADS>
-            Sets the number of threads used by the server [possible values: 1..10]
+            Sets the number of worker threads used by the server [possible values: 1, .., 10]
 ```
 
   

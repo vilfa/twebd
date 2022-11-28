@@ -179,8 +179,6 @@ impl SecureConnectionHandler<ServerError> for HttpsServer {
             conn.write_tls()?;
         }
 
-        // TODO: Browser doesn't receive the HTTP body when NotFound is encountered.
-
         if conn.is_closing() {
             conn.shutdown(std::net::Shutdown::Both, poll.registry());
         } else {

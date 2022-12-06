@@ -6,9 +6,9 @@ pub mod https;
 pub mod log;
 pub mod root;
 
-use std::{net::TcpStream, path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
-pub use conn::Connection;
+pub use conn::SecureConnection;
 pub use err::{ConnectionError, ServerError, ServerRootError};
 pub use file::{File, FileReader};
 pub use http::HttpServer;
@@ -19,6 +19,8 @@ use crate::{
     cli,
     web::{HttpRequest, HttpResponse},
 };
+
+use self::conn::Connection;
 
 pub const SERVER_SOCKET_TOKEN: mio::Token = mio::Token(0);
 pub const SERVER_QUEUE_SIZE: usize = 256;
@@ -38,7 +40,14 @@ where
     E: Sized,
 {
     fn listen(&mut self);
-    fn handle(stream: &mut TcpStream, root: Arc<PathBuf>) -> Result<Vec<u8>, E>;
+    fn accept(&mut self) -> Result<(), E>;
+    fn event(&mut self, event: &mio::event::Event) -> Result<(), E>;
+    fn handle(
+        event: &mio::event::Event,
+        conn: &mut Connection,
+        poll: &mio::Poll,
+        root: &PathBuf,
+    ) -> Result<(), E>;
 }
 
 pub trait SecureConnectionHandler<E>
@@ -50,7 +59,7 @@ where
     fn event(&mut self, event: &mio::event::Event) -> Result<(), E>;
     fn handle(
         event: &mio::event::Event,
-        conn: &mut Connection,
+        conn: &mut SecureConnection,
         poll: &mio::Poll,
         root: &PathBuf,
     ) -> Result<(), E>;

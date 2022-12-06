@@ -2,7 +2,7 @@ use crate::{
     cli::{Builder, CliOpt},
     net::{SocketBuilder, TcpSocket},
     srv::{
-        Connection, SecureConnectionHandler, Server, ServerError, ServerRootBuilder,
+        SecureConnection, SecureConnectionHandler, Server, ServerError, ServerRootBuilder,
         SERVER_QUEUE_SIZE, SERVER_SOCKET_TOKEN,
     },
     syn::{ThreadPool, ThreadPoolBuilder},
@@ -16,10 +16,10 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 pub struct HttpsServer {
     pub socket: TcpSocket,
-    pub connections: HashMap<mio::Token, Connection>,
+    pub connections: HashMap<mio::Token, SecureConnection>,
     pub poll: mio::Poll,
     pub root: PathBuf,
-    pub next_conn_id: usize,
+    pub nxid: usize,
     pub threads: ThreadPool,
     pub tls_config: Arc<rustls::ServerConfig>,
 }
@@ -64,14 +64,14 @@ impl Server<Self, ServerError> for HttpsServer {
         }
 
         let connections = HashMap::new();
-        let next_conn_id = 1;
+        let nxid = 1;
 
         HttpsServer {
             socket,
             connections,
             poll,
             root,
-            next_conn_id,
+            nxid,
             threads,
             tls_config: Arc::new(tls_config),
         }
@@ -121,14 +121,14 @@ impl SecureConnectionHandler<ServerError> for HttpsServer {
                         "accepting new connection on socket: from: {:?} {:?}",
                         &socket, &address
                     );
-                    let token = mio::Token(self.next_conn_id);
+                    let token = mio::Token(self.nxid);
                     let tls_connection =
                         rustls::ServerConnection::new(self.tls_config.clone()).unwrap();
-                    let mut connection = Connection::new(socket, token, tls_connection);
+                    let mut connection = SecureConnection::new(socket, token, tls_connection);
                     connection.register(self.poll.registry());
                     self.connections.insert(token, connection);
 
-                    self.next_conn_id += 1;
+                    self.nxid += 1;
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(()),
                 Err(e) => {
@@ -159,7 +159,7 @@ impl SecureConnectionHandler<ServerError> for HttpsServer {
     }
     fn handle(
         event: &mio::event::Event,
-        conn: &mut Connection,
+        conn: &mut SecureConnection,
         poll: &mio::Poll,
         root: &PathBuf,
     ) -> Result<(), ServerError> {
@@ -178,8 +178,6 @@ impl SecureConnectionHandler<ServerError> for HttpsServer {
         if event.is_writable() {
             conn.write_tls()?;
         }
-
-        // TODO: Browser doesn't receive the HTTP body when NotFound is encountered.
 
         if conn.is_closing() {
             conn.shutdown(std::net::Shutdown::Both, poll.registry());
